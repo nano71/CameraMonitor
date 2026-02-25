@@ -85,43 +85,48 @@ class StreamerActivity : ComponentActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 streamerViewModel.restartStreaming()
-                streamerViewModel.startStopSignal.collect()
-            }
-        }
-        lifecycleScope.launch {
-            permissionsViewModel.uiActionFlow().collect {
-                when (it) {
-                    RequestCameraPermission -> permissionsViewModel.requestCameraPermission()
-                    RequestRecordAudioPermission -> permissionsViewModel.requestRecordAudioPermission()
+
+                launch {
+                    streamerViewModel.startStopSignal.collect()
                 }
-            }
-        }
-        lifecycleScope.launch {
-            streamerUiActionDelegate.uiActionFlow(streamerViewModel).collect {
-                when (it) {
-                    Initialize -> {
-                        viewPager.setCurrentItem(0, true)
-                    }
 
-                    RequestUsbPermission -> {
-                        // no-op here but handle separately below by checking for status of USB permission in
-                        // onResume because we yield to OS to avoid double permission dialog.
-                        Log.i(TAG, "RequestUsbPermission called")
-                        if (lifecycle.currentState == Lifecycle.State.RESUMED) {
-                            streamerViewModel.requestUsbPermission(this@StreamerActivity.lifecycle)
+                launch {
+                    permissionsViewModel.uiActionFlow().collect {
+                        when (it) {
+                            RequestCameraPermission -> permissionsViewModel.requestCameraPermission()
+                            RequestRecordAudioPermission -> permissionsViewModel.requestRecordAudioPermission()
                         }
                     }
+                }
 
-                    PresentStreamingScreen -> {
-                        if (!screensAdapter.screens.contains(StreamerScreen.Streaming)) {
-                            screensAdapter.screens = listOf(StreamerScreen.Status, StreamerScreen.Streaming)
-                            screensAdapter.notifyItemInserted(1)
-                            viewPager.setCurrentItem(1, true)
+                launch {
+                    streamerUiActionDelegate.uiActionFlow(streamerViewModel).collect {
+                        when (it) {
+                            Initialize -> {
+                                viewPager.setCurrentItem(0, true)
+                            }
+
+                            RequestUsbPermission -> {
+                                // no-op here but handle separately below by checking for status of USB permission in
+                                // onResume because we yield to OS to avoid double permission dialog.
+                                Log.i(TAG, "RequestUsbPermission called")
+                                if (lifecycle.currentState == Lifecycle.State.RESUMED) {
+                                    streamerViewModel.requestUsbPermission(this@StreamerActivity.lifecycle)
+                                }
+                            }
+
+                            PresentStreamingScreen -> {
+                                if (!screensAdapter.screens.contains(StreamerScreen.Streaming)) {
+                                    screensAdapter.screens = listOf(StreamerScreen.Status, StreamerScreen.Streaming)
+                                    screensAdapter.notifyItemInserted(1)
+                                    viewPager.setCurrentItem(1, true)
+                                }
+                            }
+
+                            DismissStreamingScreen -> {
+                                stopStreaming(screensAdapter)
+                            }
                         }
-                    }
-
-                    DismissStreamingScreen -> {
-                        stopStreaming(screensAdapter)
                     }
                 }
             }
