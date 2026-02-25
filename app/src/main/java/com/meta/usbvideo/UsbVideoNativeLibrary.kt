@@ -37,17 +37,6 @@ object UsbVideoNativeLibrary {
 
     fun getUsbSpeed(): UsbSpeed = UsbSpeed.entries[getUsbDeviceSpeed()]
 
-    fun getUsbSpeedString(): String {
-        return when (getUsbSpeed()) {
-            UsbSpeed.Unknown -> "Unknown speed"
-            UsbSpeed.Low -> "Low speed (1.5 Mbps)"
-            UsbSpeed.Full -> "Full speed (12 Mbps)"
-            UsbSpeed.High -> "High speed (480 Mbps)"
-            UsbSpeed.Super -> "SuperSpeed (5 Gbps)"
-            UsbSpeed.SuperPlus -> "SuperSpeed+ (10 Gbps)"
-        }
-    }
-
     private external fun getUsbDeviceSpeed(): Int
 
     fun connectUsbAudioStreaming(

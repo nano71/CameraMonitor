@@ -17,5 +17,5 @@ limitations under the License.
 <resources>
 <color name="overlaySurface">#80000000</color>
 <color name="onOverlaySurface">@android:color/white</color>
-<color name="lighter_text_on_dark">#66d2d2d3</color>
+    <color name="app_requirements">#999</color>
 </resources>

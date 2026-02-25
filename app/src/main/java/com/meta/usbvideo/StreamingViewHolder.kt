@@ -22,7 +22,6 @@ import android.view.TextureView
 import android.view.View
 import android.widget.TextView
 import androidx.core.view.isVisible
-import com.meta.usbvideo.eventloop.EventLooper
 import com.meta.usbvideo.ui.VideoContainerView
 
 private const val TAG = "StreamingViewHolder"
@@ -37,7 +36,6 @@ class StreamingViewHolder(
     val videoFrame: VideoContainerView = rootView.findViewById(R.id.video_container)
     private var lastUpdatedAt = 0L
     private var stateTransitionAt = 0L
-    var isPlaying: Boolean = true
 
     init {
         val videoTextureView = TextureView(videoFrame.context)
@@ -85,7 +83,7 @@ class StreamingViewHolder(
                             } else {
                                 streamerViewModel.getStreamingStatsSummaryString()
                             }
-                        streamingStats.setText(streamingStatsSummaryText)
+                        streamingStats.text = streamingStatsSummaryText
                         streamingStats.isVisible = streamingStatsSummaryText.isNotEmpty()
                         lastUpdatedAt = now
                     }

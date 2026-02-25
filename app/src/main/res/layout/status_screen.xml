@@ -50,7 +50,7 @@ limitations under the License.
       android:layout_marginEnd="48dp"
       android:textSize="12sp"
       android:text="@string/app_requirements"
-      android:textColor="@color/lighter_text_on_dark"
+          android:textColor="@color/app_requirements"
       app:layout_constraintStart_toStartOf="parent"
       app:layout_constraintEnd_toEndOf="parent"
       app:layout_constraintTop_toBottomOf="@id/app_description"

@@ -1,37 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-  <string name="app_name" translatable="false">USB 视频</string>
-  <string name="app_description" translatable="false">大屏游戏与娱乐</string>
-  <string name="app_requirements" translatable="false">需要 USB 采集卡和 HDMI/DisplayPort 信号源。</string>
-  <string name="app_permissions_explanation" translatable="false">❓运行 USB 采集卡需要相机和录音权限。</string>
-  <string name="app_permissions_granted" translatable="false">✔ 应用权限已授予</string>
-  <string name="app_permissions_denied" translatable="false">✖ 缺少运行 USB 采集卡所需的相机和录音权限。请前往 设置 > 应用 > 已安装 > USB 视频 修改权限</string>
-  <string name="camera_permission_denied" translatable="false">✖ 缺少运行 USB 采集卡所需的相机权限。请前往 设置 > 应用 > 已安装 > USB 视频 修改权限</string>
-  <string name="record_audio_permission_denied" translatable="false">✖ 缺少运行 USB 采集卡所需的录音权限。请前往 设置 > 应用 > 已安装 > USB 视频 修改权限</string>
-  <string name="start_streaming" translatable="false">开始推流</string>
-  <string name="device_connected" translatable="false">✔ USB 采集卡已连接</string>
-  <string name="device_connected_with_details" translatable="false">✔ 已连接到 %1$s（%2$s）</string>
-  <string name="audio_streaming_wait_state" translatable="false">正在启动音频…</string>
-  <string name="audio_streaming_success" translatable="false">✔ 音频推流中</string>
-  <string name="audio_streaming_failure" translatable="false">✖ 音频推流失败。%1$s</string>
-  <string name="audio_streaming_stopped" translatable="false">✖ 音频推流已停止。</string>
-  <string name="video_streaming_wait_state" translatable="false">正在启动视频…</string>
-  <string name="video_streaming_success" translatable="false">✔ 视频推流中</string>
-  <string name="video_streaming_failure" translatable="false">✖ 视频推流失败。%1$s</string>
-  <string name="video_streaming_stopped" translatable="false">✖ 视频推流已停止。</string>
-  <string name="uvc_device_found" translatable="false">✔ 已检测到 USB 采集卡</string>
-  <string name="uvc_device_not_found" translatable="false">✖ 未检测到 USB 采集卡</string>
-  <string name="uvc_device_attached" translatable="false">✔ 已检测到 USB 采集卡</string>
-  <string name="uvc_device_detached" translatable="false">✖ USB 采集卡已断开</string>
-  <string name="uvc_device_permission_denied" translatable="false">✖ USB 权限被拒绝</string>
-  <string name="uvc_device_permission_granted" translatable="false">✔ USB 设备权限已授予</string>
-  <string name="uvc_device_permission_required" translatable="false">❓需要 USB 设备权限</string>
-  <string name="uvc_device_permission_requested" translatable="false">❓已请求 USB 设备权限</string>
-  <string name="streaming_stats_toggle_tip" translatable="false">点击屏幕可切换统计信息</string>
-  <string name="usb_speed_unknown" translatable="false">未知速率</string>
-  <string name="usb_speed_low" translatable="false">低速</string>
-  <string name="usb_speed_full" translatable="false">全速</string>
-  <string name="usb_speed_high" translatable="false">高速</string>
-  <string name="usb_speed_super" translatable="false">超高速</string>
-  <string name="usb_speed_super_plus" translatable="false">超高速+</string>
+    <string name="app_name" translatable="false">USB 视频</string>
+    <string name="app_description" translatable="false">这是你的便携式相机监视器</string>
+    <string name="app_requirements" translatable="false">需要 USB 采集卡和 HDMI/DisplayPort 信号源</string>
+    <string name="app_permissions_explanation" translatable="false">❓运行 USB 采集卡需要相机和录音权限</string>
+    <string name="app_permissions_granted" translatable="false">✔ 应用权限已授予</string>
+    <string name="app_permissions_denied" translatable="false">✖ 缺少运行 USB 采集卡所需的相机和录音权限，请前往 设置 > 应用 > 已安装 > USB 视频 修改权限</string>
+    <string name="camera_permission_denied" translatable="false">✖ 缺少运行 USB 采集卡所需的相机权限，请前往 设置 > 应用 > 已安装 > USB 视频 修改权限</string>
+    <string name="record_audio_permission_denied" translatable="false">✖ 缺少运行 USB 采集卡所需的录音权限，请前往 设置 > 应用 > 已安装 > USB 视频 修改权限</string>
+    <string name="start_streaming" translatable="false">开始推流</string>
+    <string name="device_connected" translatable="false">✔ USB 采集卡已连接</string>
+    <string name="device_connected_with_details" translatable="false">✔ 已连接到 %1$s - %2$s</string>
+    <string name="audio_streaming_wait_state" translatable="false">正在启动音频…</string>
+    <string name="audio_streaming_success" translatable="false">✔ 音频推流中</string>
+    <string name="audio_streaming_failure" translatable="false">✖ 音频推流失败 %1$s</string>
+    <string name="audio_streaming_stopped" translatable="false">✖ 音频推流已停止</string>
+    <string name="video_streaming_wait_state" translatable="false">正在启动视频…</string>
+    <string name="video_streaming_success" translatable="false">✔ 视频推流中</string>
+    <string name="video_streaming_failure" translatable="false">✖ 视频推流失败 %1$s</string>
+    <string name="video_streaming_stopped" translatable="false">✖ 视频推流已停止</string>
+    <string name="uvc_device_found" translatable="false">✔ 已检测到 USB 采集卡</string>
+    <string name="uvc_device_not_found" translatable="false">✖ 未检测到 USB 采集卡</string>
+    <string name="uvc_device_attached" translatable="false">✔ 已检测到 USB 采集卡</string>
+    <string name="uvc_device_detached" translatable="false">✖ USB 采集卡已断开</string>
+    <string name="uvc_device_permission_denied" translatable="false">✖ USB 权限被拒绝</string>
+    <string name="uvc_device_permission_granted" translatable="false">✔ USB 设备权限已授予</string>
+    <string name="uvc_device_permission_required" translatable="false">❓需要 USB 设备权限</string>
+    <string name="uvc_device_permission_requested" translatable="false">❓已请求 USB 设备权限</string>
+    <string name="streaming_stats_toggle_tip" translatable="false">向右滑动屏幕可切换统计信息</string>
+    <string name="usb_speed_unknown" translatable="false" />
+    <string name="usb_speed_low" translatable="false">Low speed (1.5 Mbps)</string>
+    <string name="usb_speed_full" translatable="false">Full speed (12 Mbps)</string>
+    <string name="usb_speed_high" translatable="false">High speed (480 Mbps)</string>
+    <string name="usb_speed_super" translatable="false">SuperSpeed (5 Gbps)</string>
+    <string name="usb_speed_super_plus" translatable="false">SuperSpeed+ (10 Gbps)</string>
 </resources>

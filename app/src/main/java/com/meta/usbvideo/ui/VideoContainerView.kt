@@ -16,6 +16,7 @@
 package com.meta.usbvideo.ui
 
 import android.content.Context
+import android.graphics.Color
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.TextureView
@@ -27,12 +28,15 @@ import kotlin.math.abs
  * enforce aspect ratio if passed from above.
  */
 class VideoContainerView(context: Context, attrs: AttributeSet) : FrameLayout(context, attrs) {
+    init {
+        setBackgroundColor(Color.BLACK)
+    }
 
     private var videoView: TextureView? = null
 
     fun addVideoTextureView(videoView: TextureView, width: Int, height: Int) {
         this.videoView = videoView
-        addView(videoView, FrameLayout.LayoutParams(width, height, Gravity.CENTER))
+        addView(videoView, LayoutParams(width, height, Gravity.CENTER))
     }
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
