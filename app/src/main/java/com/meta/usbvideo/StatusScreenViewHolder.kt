@@ -42,20 +42,13 @@ class StatusScreenViewHolder(
     private val rootView: View,
     private val streamerViewModel: StreamerViewModel,
 ) : StreamerScreenViewHolder(rootView) {
-    private val appPermissionsStatus: TextView
-    private val usbDeviceStatus: TextView
-    private val audioStreamingStatus: TextView
-    private val videoStreamingStatus: TextView
+    private val appPermissionsStatus: TextView = rootView.findViewById(R.id.app_permissions_status)
+    private val usbDeviceStatus: TextView = rootView.findViewById(R.id.usb_device_status)
+    private val audioStreamingStatus: TextView = rootView.findViewById(R.id.audio_streaming_status)
+    private val videoStreamingStatus: TextView = rootView.findViewById(R.id.video_streaming_status)
 
     private val context: Context
         get() = rootView.context
-
-    init {
-        appPermissionsStatus = rootView.findViewById(R.id.app_permissions_status)
-        usbDeviceStatus = rootView.findViewById(R.id.usb_device_status)
-        audioStreamingStatus = rootView.findViewById(R.id.audio_streaming_status)
-        videoStreamingStatus = rootView.findViewById(R.id.video_streaming_status)
-    }
 
     fun observeViewModel(
         lifecycleOwner: LifecycleOwner,

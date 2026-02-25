@@ -33,7 +33,6 @@ import android.view.Surface
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
 import androidx.core.content.IntentCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.Lifecycle
@@ -55,6 +54,7 @@ import com.meta.usbvideo.usb.UsbMonitor.findUvcDevice
 import com.meta.usbvideo.usb.UsbMonitor.getUsbManager
 import com.meta.usbvideo.usb.UsbMonitor.setState
 import com.meta.usbvideo.usb.VideoFormat
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -66,6 +66,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 sealed interface UiAction
 
@@ -97,9 +98,9 @@ class StreamerViewModel(
     var videoFormats: List<VideoFormat> = emptyList()
     private var usbPermissionRequestedAtMs: Long = 0L
 
-    fun setVideoFormatAt(index: Int) {
-        videoFormat = videoFormats.get(index)
-    }
+//    fun setVideoFormatAt(index: Int) {
+//        videoFormat = videoFormats[index]
+//    }
 
     fun stopStreaming() {
         (UsbMonitor.usbDeviceState as? UsbDeviceState.Streaming)?.let {
@@ -155,8 +156,12 @@ class StreamerViewModel(
         }
         activity.lifecycle.addObserver(
             LifecycleEventObserver { _, event ->
+                Log.i(TAG, "LifecycleEventObserver called with: event = $event")
                 when (event) {
-                    Lifecycle.Event.ON_RESUME -> refreshUsbPermissionStateFromSystem("onResume")
+                    Lifecycle.Event.ON_RESUME -> {
+                        MainScope().launch { refreshUsbPermissionStateFromSystem() }
+                    }
+
                     Lifecycle.Event.ON_DESTROY -> activity.unregisterReceiver(usbReceiver)
                     else -> Unit
                 }
@@ -197,7 +202,7 @@ class StreamerViewModel(
         ) { cameraPermissionState: CameraPermissionState,
             recordAudioPermissionState: RecordAudioPermissionState,
             usbDeviceState: UsbDeviceState ->
-            Log.i(TAG, "$cameraPermissionState, $recordAudioPermissionState $usbDeviceState")
+//            Log.i(TAG, "$cameraPermissionState, $recordAudioPermissionState $usbDeviceState")
             when {
                 cameraPermissionState is CameraPermissionRequired -> {
                     emit(RequestCameraPermission)
@@ -324,16 +329,6 @@ class StreamerViewModel(
         }
     }
 
-    fun getUSBDeviceNameAndSpeed(streamingDeviceState: UsbDeviceState.Streaming? = null): String {
-        return if (streamingDeviceState != null) {
-            val productName = streamingDeviceState.usbDevice.productName
-            val usbSpeed: String? = getUsbSpeedLabel(UsbVideoNativeLibrary.getUsbSpeed())
-            arrayOf(productName, usbSpeed).filterNotNull().joinToString(" \u2022 ")
-        } else {
-            application.getString(R.string.app_name)
-        }
-    }
-
     fun getStreamingStatsSummaryString(): String {
         val usbDeviceState = UsbMonitor.usbDeviceState
         return if (usbDeviceState is UsbDeviceState.Streaming) {
@@ -341,7 +336,7 @@ class StreamerViewModel(
             val usbSpeed: String? = getUsbSpeedLabel(UsbVideoNativeLibrary.getUsbSpeed())
             val line1 = arrayOf(productName, usbSpeed).filterNotNull().joinToString(" \u2022 ")
             val stats = UsbVideoNativeLibrary.streamingStatsSummaryString()
-            arrayOf(line1, stats).filterNotNull().joinToString("\n")
+            arrayOf(line1, stats).toList().joinToString("\n")
         } else {
             ""
         }
@@ -374,12 +369,12 @@ class StreamerViewModel(
     }
 
 
-    suspend fun requestCameraPermission() {
+    fun requestCameraPermission() {
         cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         updateCameraPermissionState(CameraPermissionRequested)
     }
 
-    suspend fun requestRecordAudioPermission() {
+    fun requestRecordAudioPermission() {
         recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         updateRecordAudioPermissionState(RecordAudioPermissionRequested)
     }
@@ -413,6 +408,7 @@ class StreamerViewModel(
         recordAudioPermissionInternalState.value = recordAudioPermission
     }
 
+    @Suppress("PrivatePropertyName")
     private val AV_DEVICE_USB_CLASSES: IntArray =
         intArrayOf(
             UsbConstants.USB_CLASS_VIDEO,
@@ -502,9 +498,10 @@ class StreamerViewModel(
         }
     }
 
-    private fun refreshUsbPermissionStateFromSystem(reason: String) {
+    private suspend fun refreshUsbPermissionStateFromSystem() {
         val usbManager = getUsbManager() ?: return
         val state = UsbMonitor.usbDeviceState
+        Log.i(TAG, "refreshUsbPermissionStateFromSystem() called with: state = $state")
         val device =
             when (state) {
                 is UsbDeviceState.PermissionRequired -> state.usbDevice
@@ -516,14 +513,15 @@ class StreamerViewModel(
 
         if (usbManager.hasPermission(device)) {
             usbPermissionRequestedAtMs = 0L
-            Log.i(TAG, "refreshUsbPermissionStateFromSystem($reason): permission is granted, recovering state")
+            Log.i(TAG, "refreshUsbPermissionStateFromSystem: permission is granted, recovering state")
             setState(UsbDeviceState.PermissionGranted(device))
             return
         }
 
-        if (state is UsbDeviceState.PermissionRequested && usbPermissionRequestedAtMs > 0L) {
-            val elapsedMs = SystemClock.uptimeMillis() - usbPermissionRequestedAtMs
-            Log.i(TAG, "refreshUsbPermissionStateFromSystem($reason): permission still pending for ${elapsedMs}ms")
+        if (state is UsbDeviceState.PermissionRequested || state is UsbDeviceState.PermissionRequired || state is UsbDeviceState.PermissionDenied) {
+            delay(2000)
+            Log.i(TAG, "refreshUsbPermissionStateFromSystem: permission not granted, triggering fallback request")
+            askUserUsbDevicePermission(device)
         }
     }
 
