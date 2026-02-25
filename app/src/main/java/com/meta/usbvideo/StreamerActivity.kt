@@ -18,6 +18,7 @@ package com.meta.usbvideo
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.addCallback
 import androidx.activity.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -26,6 +27,7 @@ import androidx.viewpager2.widget.ViewPager2
 import com.meta.usbvideo.animation.ZoomOutPageTransformer
 import com.meta.usbvideo.permission.getCameraPermissionState
 import com.meta.usbvideo.permission.getRecordAudioPermissionState
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
@@ -44,8 +46,23 @@ class StreamerActivity : ComponentActivity() {
         StreamerViewModelFactory(getCameraPermissionState(), getRecordAudioPermissionState())
     }
 
+    override fun onResume() {
+        super.onResume()
+        Log.i(TAG, "StreamerActivity.onResume() called")
+        MainScope().launch { streamerViewModel.refreshUsbPermissionStateFromSystem() }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.i(TAG, "StreamerActivity.onDestroy() called")
+        android.os.Process.killProcess(android.os.Process.myPid())
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        onBackPressedDispatcher.addCallback(this) {
+            moveTaskToBack(true)
+        }
         doOnCreate()
     }
 
@@ -105,6 +122,7 @@ class StreamerActivity : ComponentActivity() {
     }
 
     private fun stopStreaming(screensAdapter: StreamerScreensAdapter) {
+        Log.i(TAG, "stopStreaming() called")
         val screensCount = screensAdapter.screens.size
         if (screensCount > 1) {
             screensAdapter.screens = listOf(StreamerScreen.Status)

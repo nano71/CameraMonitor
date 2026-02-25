@@ -54,7 +54,6 @@ import com.meta.usbvideo.usb.UsbMonitor.findUvcDevice
 import com.meta.usbvideo.usb.UsbMonitor.getUsbManager
 import com.meta.usbvideo.usb.UsbMonitor.setState
 import com.meta.usbvideo.usb.VideoFormat
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -66,7 +65,6 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
 sealed interface UiAction
 
@@ -157,13 +155,9 @@ class StreamerViewModel(
         activity.lifecycle.addObserver(
             LifecycleEventObserver { _, event ->
                 Log.i(TAG, "LifecycleEventObserver called with: event = $event")
-                when (event) {
-                    Lifecycle.Event.ON_RESUME -> {
-                        MainScope().launch { refreshUsbPermissionStateFromSystem() }
-                    }
-
-                    Lifecycle.Event.ON_DESTROY -> activity.unregisterReceiver(usbReceiver)
-                    else -> Unit
+                Log.d(TAG, "LifecycleEventObserver called with: usbDeviceState = ${UsbMonitor.usbDeviceState}")
+                if (event == Lifecycle.Event.ON_DESTROY) {
+                    activity.unregisterReceiver(usbReceiver)
                 }
             })
     }
@@ -241,6 +235,8 @@ class StreamerViewModel(
                 }
 
                 usbDeviceState is UsbDeviceState.Detached -> {
+                    Log.i(TAG, "usbDeviceState is UsbDeviceState.Detached")
+
                     EventLooper.call {
                         UsbVideoNativeLibrary.stopUsbAudioStreamingNative()
                         UsbVideoNativeLibrary.stopUsbVideoStreamingNative()
@@ -294,6 +290,8 @@ class StreamerViewModel(
                 }
 
                 usbDeviceState is UsbDeviceState.StreamingStop -> {
+                    Log.i(TAG, "usbDeviceState is UsbDeviceState.StreamingStop")
+
                     EventLooper.call {
                         UsbVideoNativeLibrary.stopUsbAudioStreamingNative()
                         UsbVideoNativeLibrary.stopUsbVideoStreamingNative()
@@ -498,7 +496,7 @@ class StreamerViewModel(
         }
     }
 
-    private suspend fun refreshUsbPermissionStateFromSystem() {
+    suspend fun refreshUsbPermissionStateFromSystem() {
         val usbManager = getUsbManager() ?: return
         val state = UsbMonitor.usbDeviceState
         Log.i(TAG, "refreshUsbPermissionStateFromSystem() called with: state = $state")

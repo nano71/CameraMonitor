@@ -28,10 +28,4 @@
     <string name="uvc_device_permission_required" translatable="false">❓需要 USB 设备权限</string>
     <string name="uvc_device_permission_requested" translatable="false">❓已请求 USB 设备权限</string>
     <string name="streaming_stats_toggle_tip" translatable="false">向右滑动屏幕可切换统计信息</string>
-    <string name="usb_speed_unknown" translatable="false" />
-    <string name="usb_speed_low" translatable="false">Low speed (1.5 Mbps)</string>
-    <string name="usb_speed_full" translatable="false">Full speed (12 Mbps)</string>
-    <string name="usb_speed_high" translatable="false">High speed (480 Mbps)</string>
-    <string name="usb_speed_super" translatable="false">SuperSpeed (5 Gbps)</string>
-    <string name="usb_speed_super_plus" translatable="false">SuperSpeed+ (10 Gbps)</string>
 </resources>
