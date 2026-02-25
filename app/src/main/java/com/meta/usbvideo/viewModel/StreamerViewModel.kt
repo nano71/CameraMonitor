@@ -15,28 +15,18 @@
  */
 package com.meta.usbvideo.viewModel
 
-import android.Manifest
 import android.app.Application
 import android.app.PendingIntent
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.graphics.SurfaceTexture
 import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
-import android.os.Build
 import android.os.SystemClock
 import android.util.Log
 import android.view.Surface
-import androidx.activity.ComponentActivity
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.IntentCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewModelScope
 import com.meta.usbvideo.R
 import com.meta.usbvideo.UsbSpeed
@@ -44,12 +34,10 @@ import com.meta.usbvideo.UsbVideoNativeLibrary
 import com.meta.usbvideo.connection.VideoFormat
 import com.meta.usbvideo.eventloop.EventLooper
 import com.meta.usbvideo.permission.CameraPermissionRequested
-import com.meta.usbvideo.permission.CameraPermissionRequired
 import com.meta.usbvideo.permission.CameraPermissionState
+import com.meta.usbvideo.permission.PermissionStatus
 import com.meta.usbvideo.permission.RecordAudioPermissionRequested
-import com.meta.usbvideo.permission.RecordAudioPermissionRequired
 import com.meta.usbvideo.permission.RecordAudioPermissionState
-import com.meta.usbvideo.permission.getPermissionStatus
 import com.meta.usbvideo.permission.toCameraState
 import com.meta.usbvideo.permission.toRecordAudioState
 import com.meta.usbvideo.usb.UsbDeviceState
@@ -63,24 +51,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.stateIn
-
-sealed interface UiAction
-
-object Initialize : UiAction
-
-object RequestCameraPermission : UiAction
-
-object RequestRecordAudioPermission : UiAction
-
-object RequestUsbPermission : UiAction
-
-object PresentStreamingScreen : UiAction
-object DismissStreamingScreen : UiAction
 
 private const val TAG = "StreamerViewModel"
 private const val ACTION_USB_PERMISSION: String = "com.meta.usbvideo.USB_PERMISSION"
@@ -92,16 +66,9 @@ class StreamerViewModel(
     recordAudioPermission: RecordAudioPermissionState,
 ) : AndroidViewModel(application) {
 
-    private lateinit var cameraPermissionLauncher: ActivityResultLauncher<String>
-    private lateinit var recordAudioPermissionLauncher: ActivityResultLauncher<String>
-
     var videoFormat: VideoFormat? = null
     var videoFormats: List<VideoFormat> = emptyList()
     private var usbPermissionRequestedAtMs: Long = 0L
-
-//    fun setVideoFormatAt(index: Int) {
-//        videoFormat = videoFormats[index]
-//    }
 
     fun stopStreaming() {
         (UsbMonitor.usbDeviceState as? UsbDeviceState.Streaming)?.let {
@@ -125,44 +92,6 @@ class StreamerViewModel(
                 )
             )
         }
-    }
-
-    fun prepareCameraPermissionLaunchers(activity: ComponentActivity) {
-        cameraPermissionLauncher =
-            activity.registerForActivityResult(ActivityResultContracts.RequestPermission()) {
-                updateCameraPermissionState(
-                    activity.getPermissionStatus(Manifest.permission.CAMERA).toCameraState()
-                )
-            }
-        recordAudioPermissionLauncher =
-            activity.registerForActivityResult(ActivityResultContracts.RequestPermission()) {
-                updateRecordAudioPermissionState(
-                    activity.getPermissionStatus(Manifest.permission.RECORD_AUDIO).toRecordAudioState()
-                )
-            }
-        activity.lifecycle.addObserver(
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_DESTROY) {
-                    recordAudioPermissionLauncher.unregister()
-                    cameraPermissionLauncher.unregister()
-                }
-            })
-    }
-
-    fun prepareUsbBroadcastReceivers(activity: ComponentActivity) {
-        activity.registerReceiver(usbReceiver, IntentFilter(UsbManager.ACTION_USB_DEVICE_ATTACHED))
-        activity.registerReceiver(usbReceiver, IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED))
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            activity.registerReceiver(usbReceiver, IntentFilter(ACTION_USB_PERMISSION), Context.RECEIVER_NOT_EXPORTED)
-        }
-        activity.lifecycle.addObserver(
-            LifecycleEventObserver { _, event ->
-                Log.i(TAG, "LifecycleEventObserver called with: event = $event")
-                Log.d(TAG, "LifecycleEventObserver called with: usbDeviceState = ${UsbMonitor.usbDeviceState}")
-                if (event == Lifecycle.Event.ON_DESTROY) {
-                    activity.unregisterReceiver(usbReceiver)
-                }
-            })
     }
 
     private val cameraPermissionInternalState: MutableStateFlow<CameraPermissionState> =
@@ -191,142 +120,88 @@ class StreamerViewModel(
         return videoSurfaceStateFlow.filterNotNull().first()
     }
 
-    fun uiActionFlow(): Flow<UiAction> {
-        return combineTransform(
-            cameraPermissionStateFlow,
-            recordAudioPermissionStateFlow,
-            UsbMonitor.usbDeviceStateFlow,
-        ) { cameraPermissionState: CameraPermissionState,
-            recordAudioPermissionState: RecordAudioPermissionState,
-            usbDeviceState: UsbDeviceState ->
-//            Log.i(TAG, "$cameraPermissionState, $recordAudioPermissionState $usbDeviceState")
-            when {
-                cameraPermissionState is CameraPermissionRequired -> {
-                    emit(RequestCameraPermission)
-                }
-
-                cameraPermissionState is CameraPermissionRequested -> {
-                    Log.i(TAG, "CameraPermissionRequested. No op")
-                }
-
-                recordAudioPermissionState is RecordAudioPermissionRequired -> {
-                    emit(RequestRecordAudioPermission)
-                }
-
-                recordAudioPermissionState is RecordAudioPermissionRequested -> {
-                    Log.i(TAG, "RecordAudioPermissionRequested. No op")
-                }
-
-                usbDeviceState is UsbDeviceState.NotFound -> {
-                    Log.i(TAG, "UsbDeviceState NotFound. No op")
-                }
-
-                usbDeviceState is UsbDeviceState.PermissionRequired -> {
-                    Log.i(TAG, "usb permission required. Will try after few seconds")
-                }
-
-                usbDeviceState is UsbDeviceState.PermissionRequested -> {
-                    Log.i(TAG, "usb permission requested. Waiting for result")
-                }
-
-                usbDeviceState is UsbDeviceState.PermissionGranted -> {
-                    onUsbPermissionGranted(usbDeviceState.usbDevice)
-                }
-
-                usbDeviceState is UsbDeviceState.Attached -> {
-                    onUsbDeviceAttached(usbDeviceState.usbDevice)
-                }
-
-                usbDeviceState is UsbDeviceState.Detached -> {
-                    Log.i(TAG, "usbDeviceState is UsbDeviceState.Detached")
-
-                    EventLooper.call {
-                        UsbVideoNativeLibrary.stopUsbAudioStreamingNative()
-                        UsbVideoNativeLibrary.stopUsbVideoStreamingNative()
-                        UsbVideoNativeLibrary.disconnectUsbAudioStreamingNative()
-                        UsbVideoNativeLibrary.disconnectUsbVideoStreamingNative()
-                        UsbMonitor.disconnect()
-                    }
-                    emit(DismissStreamingScreen)
-                }
-
-                usbDeviceState is UsbDeviceState.Connected -> {
-                    Log.i(TAG, "usbDeviceState is UsbDeviceState.Connected")
-                    usbDeviceState.videoStreamingConnection.let {
-                        videoFormats = it.videoFormats
-                        videoFormat = it.findBestVideoFormat(1920, 1080)
-                    }
-                    emit(PresentStreamingScreen)
-                    val videoStreamingSurface = genSurface()
-                    val (audioStreamStatus, audioStreamMessage) =
-                        EventLooper.call {
-                            UsbVideoNativeLibrary.connectUsbAudioStreaming(
-                                application.applicationContext,
-                                usbDeviceState.audioStreamingConnection,
-                            ).also {
-                                UsbVideoNativeLibrary.startUsbAudioStreamingNative()
-                            }
-                        }
-                    Log.i(TAG, "startUsbAudioStreaming $audioStreamStatus, $audioStreamMessage")
-                    val (videoStreamStatus, videoStreamMessage) =
-                        EventLooper.call {
-                            UsbVideoNativeLibrary.connectUsbVideoStreaming(
-                                usbDeviceState.videoStreamingConnection,
-                                videoStreamingSurface,
-                                videoFormat,
-                            ).also {
-                                UsbVideoNativeLibrary.startUsbVideoStreamingNative()
-                            }
-                        }
-                    Log.i(TAG, "startUsbVideoStreaming $videoStreamStatus, $videoStreamMessage")
-                    val streamingState =
-                        UsbDeviceState.Streaming(
-                            usbDeviceState.usbDevice,
-                            usbDeviceState.audioStreamingConnection,
-                            audioStreamStatus,
-                            audioStreamMessage,
-                            usbDeviceState.videoStreamingConnection,
-                            videoStreamStatus,
-                            videoStreamMessage,
-                        )
-                    setState(streamingState)
-                }
-
-                usbDeviceState is UsbDeviceState.StreamingStop -> {
-                    Log.i(TAG, "usbDeviceState is UsbDeviceState.StreamingStop")
-
-                    EventLooper.call {
-                        UsbVideoNativeLibrary.stopUsbAudioStreamingNative()
-                        UsbVideoNativeLibrary.stopUsbVideoStreamingNative()
-                        setState(
-                            UsbDeviceState.StreamingStopped(
-                                usbDeviceState.usbDevice,
-                                usbDeviceState.audioStreamingConnection,
-                                usbDeviceState.videoStreamingConnection
-                            )
-                        )
-                    }
-                }
-
-                usbDeviceState is UsbDeviceState.StreamingRestart -> {
-                    EventLooper.call {
-                        UsbVideoNativeLibrary.startUsbAudioStreamingNative()
-                        UsbVideoNativeLibrary.startUsbVideoStreamingNative()
-                        //UsbVideoNativeLibrary.stopUsbVideoStreamingNative()
-                        setState(
-                            UsbDeviceState.Streaming(
-                                usbDeviceState.usbDevice,
-                                usbDeviceState.audioStreamingConnection,
-                                true,
-                                "Success",
-                                usbDeviceState.videoStreamingConnection,
-                                true,
-                                "Success",
-                            )
-                        )
-                    }
+    suspend fun onUsbDeviceConnected(usbDeviceState: UsbDeviceState.Connected) {
+        Log.i(TAG, "usbDeviceState is UsbDeviceState.Connected")
+        usbDeviceState.videoStreamingConnection.let {
+            videoFormats = it.videoFormats
+            videoFormat = it.findBestVideoFormat(1920, 1080)
+        }
+        val videoStreamingSurface = genSurface()
+        val (audioStreamStatus, audioStreamMessage) =
+            EventLooper.call {
+                UsbVideoNativeLibrary.connectUsbAudioStreaming(
+                    application.applicationContext,
+                    usbDeviceState.audioStreamingConnection,
+                ).also {
+                    UsbVideoNativeLibrary.startUsbAudioStreamingNative()
                 }
             }
+        Log.i(TAG, "startUsbAudioStreaming $audioStreamStatus, $audioStreamMessage")
+        val (videoStreamStatus, videoStreamMessage) =
+            EventLooper.call {
+                UsbVideoNativeLibrary.connectUsbVideoStreaming(
+                    usbDeviceState.videoStreamingConnection,
+                    videoStreamingSurface,
+                    videoFormat,
+                ).also {
+                    UsbVideoNativeLibrary.startUsbVideoStreamingNative()
+                }
+            }
+        Log.i(TAG, "startUsbVideoStreaming $videoStreamStatus, $videoStreamMessage")
+        setState(
+            UsbDeviceState.Streaming(
+                usbDeviceState.usbDevice,
+                usbDeviceState.audioStreamingConnection,
+                audioStreamStatus,
+                audioStreamMessage,
+                usbDeviceState.videoStreamingConnection,
+                videoStreamStatus,
+                videoStreamMessage,
+            )
+        )
+    }
+
+    fun onUsbDeviceDetached() {
+        Log.i(TAG, "usbDeviceState is UsbDeviceState.Detached")
+        EventLooper.call {
+            UsbVideoNativeLibrary.stopUsbAudioStreamingNative()
+            UsbVideoNativeLibrary.stopUsbVideoStreamingNative()
+            UsbVideoNativeLibrary.disconnectUsbAudioStreamingNative()
+            UsbVideoNativeLibrary.disconnectUsbVideoStreamingNative()
+            UsbMonitor.disconnect()
+        }
+    }
+
+    fun onStreamingStopRequested(usbDeviceState: UsbDeviceState.StreamingStop) {
+        Log.i(TAG, "usbDeviceState is UsbDeviceState.StreamingStop")
+        EventLooper.call {
+            UsbVideoNativeLibrary.stopUsbAudioStreamingNative()
+            UsbVideoNativeLibrary.stopUsbVideoStreamingNative()
+            setState(
+                UsbDeviceState.StreamingStopped(
+                    usbDeviceState.usbDevice,
+                    usbDeviceState.audioStreamingConnection,
+                    usbDeviceState.videoStreamingConnection
+                )
+            )
+        }
+    }
+
+    fun onStreamingRestartRequested(usbDeviceState: UsbDeviceState.StreamingRestart) {
+        EventLooper.call {
+            UsbVideoNativeLibrary.startUsbAudioStreamingNative()
+            UsbVideoNativeLibrary.startUsbVideoStreamingNative()
+            setState(
+                UsbDeviceState.Streaming(
+                    usbDeviceState.usbDevice,
+                    usbDeviceState.audioStreamingConnection,
+                    true,
+                    "Success",
+                    usbDeviceState.videoStreamingConnection,
+                    true,
+                    "Success",
+                )
+            )
         }
     }
 
@@ -369,29 +244,29 @@ class StreamerViewModel(
         return "${selectedVideoFormat.fourccFormat} ${selectedVideoFormat.width}x${selectedVideoFormat.height} @${selectedVideoFormat.fps} fps"
     }
 
-
-    fun requestCameraPermission() {
-        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+    fun markCameraPermissionRequested() {
         updateCameraPermissionState(CameraPermissionRequested)
     }
 
-    fun requestRecordAudioPermission() {
-        recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+    fun markRecordAudioPermissionRequested() {
         updateRecordAudioPermissionState(RecordAudioPermissionRequested)
     }
 
+    fun updateCameraPermissionFromStatus(permissionStatus: PermissionStatus) {
+        updateCameraPermissionState(permissionStatus.toCameraState())
+    }
+
+    fun updateRecordAudioPermissionFromStatus(permissionStatus: PermissionStatus) {
+        updateRecordAudioPermissionState(permissionStatus.toRecordAudioState())
+    }
+
     suspend fun requestUsbPermission(lifecycle: Lifecycle) {
-        // In some instances, Android presents the USB device permission dialog and
-        // sends onNewIntent to the activity. So, before requesting USB permission, we
-        // yield here to see if the current activity is still in resume state after a
-        // short delay
         delay(1000)
         val lifecycleState: Lifecycle.State = lifecycle.currentState
         val deviceState: UsbDeviceState = UsbMonitor.usbDeviceState
         Log.i(TAG, "lifecycle: $lifecycleState usbDeviceState: $deviceState")
         if (lifecycleState == Lifecycle.State.RESUMED &&
-            (!(deviceState is UsbDeviceState.Streaming ||
-                    deviceState is UsbDeviceState.Connected))
+            (!(deviceState is UsbDeviceState.Streaming || deviceState is UsbDeviceState.Connected))
         ) {
             findUvcDevice()?.let { askUserUsbDevicePermission(it) }
         } else {
@@ -409,79 +284,12 @@ class StreamerViewModel(
         recordAudioPermissionInternalState.value = recordAudioPermission
     }
 
-    @Suppress("PrivatePropertyName")
-    private val AV_DEVICE_USB_CLASSES: IntArray =
-        intArrayOf(
-            UsbConstants.USB_CLASS_VIDEO,
-            UsbConstants.USB_CLASS_AUDIO,
-        )
-
-    private fun UsbDevice.loggingInfo(): String = "$productName by $manufacturerName at $deviceName"
-    private val usbReceiver: BroadcastReceiver =
-        object : BroadcastReceiver() {
-            override fun onReceive(context: Context, intent: Intent) {
-                val action = intent.action
-                val device =
-                    when (action) {
-                        UsbManager.ACTION_USB_DEVICE_ATTACHED,
-                        UsbManager.ACTION_USB_DEVICE_DETACHED -> {
-                            IntentCompat.getParcelableExtra(
-                                intent,
-                                UsbManager.EXTRA_DEVICE,
-                                UsbDevice::class.java,
-                            )
-                        }
-
-                        ACTION_USB_PERMISSION -> findUvcDevice()
-                        else -> null
-                    }
-
-                val isUvc = device != null && isUvcDevice(device)
-                Log.i(
-                    TAG,
-                    "Received Broadcast $action for ${if (isUvc) "UVC" else "non-UVC"} device ${device?.loggingInfo()}"
-                )
-
-                if (device == null || !isUvc) {
-                    return
-                }
-                when (action) {
-                    UsbManager.ACTION_USB_DEVICE_ATTACHED -> {
-                        // resolve device using usb manager because in hasPermission may return false
-                        // negative value on attach
-                        setState(UsbDeviceState.Attached(findUvcDevice() ?: device))
-                    }
-
-                    UsbManager.ACTION_USB_DEVICE_DETACHED -> {
-                        setState(UsbDeviceState.Detached(device))
-                    }
-
-                    ACTION_USB_PERMISSION -> {
-                        usbPermissionRequestedAtMs = 0L
-                        if (getUsbManager()?.hasPermission(device) == true) {
-                            Log.i(TAG, "Permission granted for device ${device.loggingInfo()}")
-                            setState(UsbDeviceState.PermissionGranted(device))
-                        } else {
-                            Log.i(TAG, "Permission denied for device ${device.loggingInfo()}")
-                            setState(UsbDeviceState.PermissionDenied(device))
-                        }
-                    }
-                }
-            }
-        }
-
     private fun askUserUsbDevicePermission(device: UsbDevice) {
         val usbManager: UsbManager = getUsbManager() ?: return
         if (usbManager.hasPermission(device)) {
             when (UsbMonitor.usbDeviceState) {
-                is UsbDeviceState.Connected -> {
-                    Log.i(TAG, "askUserUsbDevicePermission: device already connected. Skipping")
-                }
-
-                is UsbDeviceState.Streaming -> {
-                    Log.i(TAG, "askUserUsbDevicePermission: device already streaming. Skipping")
-                }
-
+                is UsbDeviceState.Connected -> Log.i(TAG, "askUserUsbDevicePermission: device already connected. Skipping")
+                is UsbDeviceState.Streaming -> Log.i(TAG, "askUserUsbDevicePermission: device already streaming. Skipping")
                 else -> {
                     usbPermissionRequestedAtMs = 0L
                     Log.i(TAG, "askUserUsbDevicePermission: device already have permission. Updating state.")
@@ -494,7 +302,6 @@ class StreamerViewModel(
             setState(UsbDeviceState.PermissionRequested(device))
             val permissionIntent =
                 PendingIntent.getBroadcast(application, 0, Intent(ACTION_USB_PERMISSION), PendingIntent.FLAG_IMMUTABLE)
-            // Request permission from user
             usbManager.requestPermission(device, permissionIntent)
         }
     }
@@ -557,7 +364,16 @@ class StreamerViewModel(
         UsbMonitor.connect(usbDevice)
     }
 
-    private fun isUvcDevice(device: UsbDevice): Boolean {
+    @Suppress("PrivatePropertyName")
+    private val AV_DEVICE_USB_CLASSES: IntArray =
+        intArrayOf(
+            UsbConstants.USB_CLASS_VIDEO,
+            UsbConstants.USB_CLASS_AUDIO,
+        )
+
+    private fun UsbDevice.loggingInfo(): String = "$productName by $manufacturerName at $deviceName"
+
+    fun isUvcDevice(device: UsbDevice): Boolean {
         return device.deviceClass in AV_DEVICE_USB_CLASSES ||
                 isMiscDeviceWithInterfaceInAnyDeviceClass(device, AV_DEVICE_USB_CLASSES)
     }
