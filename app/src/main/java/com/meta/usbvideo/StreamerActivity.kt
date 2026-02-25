@@ -25,14 +25,14 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.viewpager2.widget.ViewPager2
 import com.meta.usbvideo.animation.ZoomOutPageTransformer
-import com.meta.usbvideo.permission.getCameraPermissionState
-import com.meta.usbvideo.permission.getRecordAudioPermissionState
+import com.meta.usbvideo.permission.PermissionsViewModel
+import com.meta.usbvideo.permission.RequestCameraPermission
+import com.meta.usbvideo.permission.RequestRecordAudioPermission
 import com.meta.usbvideo.viewModel.DismissStreamingScreen
 import com.meta.usbvideo.viewModel.Initialize
 import com.meta.usbvideo.viewModel.PresentStreamingScreen
-import com.meta.usbvideo.viewModel.RequestCameraPermission
-import com.meta.usbvideo.viewModel.RequestRecordAudioPermission
 import com.meta.usbvideo.viewModel.RequestUsbPermission
+import com.meta.usbvideo.viewModel.StreamerUiActionDelegate
 import com.meta.usbvideo.viewModel.StreamerViewModel
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.collect
@@ -49,9 +49,9 @@ class StreamerActivity : ComponentActivity() {
 
     private lateinit var viewPager: ViewPager2
 
-    private val streamerViewModel: StreamerViewModel by viewModels {
-        StreamerViewModelFactory(getCameraPermissionState(), getRecordAudioPermissionState())
-    }
+    private val streamerViewModel: StreamerViewModel by viewModels()
+    private val permissionsViewModel: PermissionsViewModel by viewModels()
+    private val streamerUiActionDelegate by lazy { StreamerUiActionDelegate(application) }
 
     override fun onResume() {
         super.onResume()
@@ -74,13 +74,13 @@ class StreamerActivity : ComponentActivity() {
     }
 
     private fun doOnCreate() {
-        streamerViewModel.prepareCameraPermissionLaunchers(this)
+        permissionsViewModel.preparePermissionLaunchers(this)
         streamerViewModel.prepareUsbBroadcastReceivers(this)
         setContentView(R.layout.activity_streamer)
         viewPager = findViewById(R.id.view_pager)
         viewPager.offscreenPageLimit = 1
         viewPager.setPageTransformer(ZoomOutPageTransformer())
-        val screensAdapter = StreamerScreensAdapter(this, streamerViewModel)
+        val screensAdapter = StreamerScreensAdapter(this, streamerViewModel, permissionsViewModel)
         viewPager.adapter = screensAdapter
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -89,18 +89,18 @@ class StreamerActivity : ComponentActivity() {
             }
         }
         lifecycleScope.launch {
-            streamerViewModel.uiActionFlow().collect {
+            permissionsViewModel.uiActionFlow().collect {
+                when (it) {
+                    RequestCameraPermission -> permissionsViewModel.requestCameraPermission()
+                    RequestRecordAudioPermission -> permissionsViewModel.requestRecordAudioPermission()
+                }
+            }
+        }
+        lifecycleScope.launch {
+            streamerUiActionDelegate.uiActionFlow(streamerViewModel).collect {
                 when (it) {
                     Initialize -> {
                         viewPager.setCurrentItem(0, true)
-                    }
-
-                    RequestCameraPermission -> {
-                        streamerViewModel.requestCameraPermission()
-                    }
-
-                    RequestRecordAudioPermission -> {
-                        streamerViewModel.requestRecordAudioPermission()
                     }
 
                     RequestUsbPermission -> {

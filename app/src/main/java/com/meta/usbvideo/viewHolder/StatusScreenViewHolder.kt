@@ -20,6 +20,7 @@ import com.meta.usbvideo.permission.RecordAudioPermissionGranted
 import com.meta.usbvideo.permission.RecordAudioPermissionRequested
 import com.meta.usbvideo.permission.RecordAudioPermissionRequired
 import com.meta.usbvideo.permission.RecordAudioPermissionState
+import com.meta.usbvideo.permission.PermissionsViewModel
 import com.meta.usbvideo.usb.UsbDeviceState
 import com.meta.usbvideo.usb.UsbMonitor
 import com.meta.usbvideo.viewModel.StreamerViewModel
@@ -30,6 +31,7 @@ import kotlinx.coroutines.launch
 class StatusScreenViewHolder(
     private val rootView: View,
     private val streamerViewModel: StreamerViewModel,
+    private val permissionsViewModel: PermissionsViewModel,
 ) : RecyclerView.ViewHolder(rootView) {
     private val appPermissionsStatus: TextView = rootView.findViewById(R.id.app_permissions_status)
     private val usbDeviceStatus: TextView = rootView.findViewById(R.id.usb_device_status)
@@ -41,14 +43,13 @@ class StatusScreenViewHolder(
 
     fun observeViewModel(
         lifecycleOwner: LifecycleOwner,
-        streamerViewModel: StreamerViewModel,
     ) {
         lifecycleOwner.lifecycleScope.launch {
             lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
                     combine(
-                        streamerViewModel.cameraPermissionStateFlow,
-                        streamerViewModel.recordAudioPermissionStateFlow,
+                        permissionsViewModel.cameraPermissionStateFlow,
+                        permissionsViewModel.recordAudioPermissionStateFlow,
                     ) { cameraPermissionState: CameraPermissionState,
                         recordAudioPermissionState: RecordAudioPermissionState ->
                         when {
