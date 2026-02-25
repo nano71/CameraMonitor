@@ -45,14 +45,15 @@ class VideoContainerView(context: Context, attrs: AttributeSet) : FrameLayout(co
             videoView.pivotY = height.toFloat() / 2f
             val scaleX = abs(right - left).toFloat() / width
             val scaleY = abs(bottom - top).toFloat() / height
-            if (abs(scaleX - 1.0) > 0.0001) {
-                videoView.scaleX = scaleX
+
+            // Use a uniform scale so the view follows the source aspect ratio reported
+            // by the UVC stream dimensions and avoids geometric stretching.
+            val uniformScale = minOf(scaleX, scaleY)
+            if (abs(uniformScale - 1.0f) > 0.0001f) {
+                videoView.scaleX = uniformScale
+                videoView.scaleY = uniformScale
             } else {
                 videoView.scaleX = 1.0f
-            }
-            if (abs(scaleY - 1.0) > 0.0001) {
-                videoView.scaleY = scaleY
-            } else {
                 videoView.scaleY = 1.0f
             }
         }
