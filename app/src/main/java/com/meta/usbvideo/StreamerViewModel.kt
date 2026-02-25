@@ -322,18 +322,10 @@ class StreamerViewModel(
     fun getUSBDeviceNameAndSpeed(streamingDeviceState: UsbDeviceState.Streaming? = null): String {
         return if (streamingDeviceState != null) {
             val productName = streamingDeviceState.usbDevice.productName
-            val usbSpeed: String? =
-                when (UsbVideoNativeLibrary.getUsbSpeed()) {
-                    UsbSpeed.Unknown -> null
-                    UsbSpeed.Low -> "Low Speed"
-                    UsbSpeed.Full -> "Full Speed"
-                    UsbSpeed.High -> "Hi-Speed"
-                    UsbSpeed.Super -> "SuperSpeed"
-                    UsbSpeed.SuperPlus -> "SuperSpeed+"
-                }
+            val usbSpeed: String? = getUsbSpeedLabel(UsbVideoNativeLibrary.getUsbSpeed())
             arrayOf(productName, usbSpeed).filterNotNull().joinToString(" \u2022 ")
         } else {
-            "USB Video"
+            application.getString(R.string.app_name)
         }
     }
 
@@ -341,20 +333,23 @@ class StreamerViewModel(
         val usbDeviceState = UsbMonitor.usbDeviceState
         return if (usbDeviceState is UsbDeviceState.Streaming) {
             val productName = usbDeviceState.usbDevice.productName
-            val usbSpeed: String? =
-                when (UsbVideoNativeLibrary.getUsbSpeed()) {
-                    UsbSpeed.Unknown -> null
-                    UsbSpeed.Low -> "Low Speed"
-                    UsbSpeed.Full -> "Full Speed"
-                    UsbSpeed.High -> "Hi-Speed"
-                    UsbSpeed.Super -> "SuperSpeed"
-                    UsbSpeed.SuperPlus -> "SuperSpeed+"
-                }
+            val usbSpeed: String? = getUsbSpeedLabel(UsbVideoNativeLibrary.getUsbSpeed())
             val line1 = arrayOf(productName, usbSpeed).filterNotNull().joinToString(" \u2022 ")
             val stats = UsbVideoNativeLibrary.streamingStatsSummaryString()
             arrayOf(line1, stats).filterNotNull().joinToString("\n")
         } else {
             ""
+        }
+    }
+
+    fun getUsbSpeedLabel(usbSpeed: UsbSpeed): String? {
+        return when (usbSpeed) {
+            UsbSpeed.Unknown -> null
+            UsbSpeed.Low -> application.getString(R.string.usb_speed_low)
+            UsbSpeed.Full -> application.getString(R.string.usb_speed_full)
+            UsbSpeed.High -> application.getString(R.string.usb_speed_high)
+            UsbSpeed.Super -> application.getString(R.string.usb_speed_super)
+            UsbSpeed.SuperPlus -> application.getString(R.string.usb_speed_super_plus)
         }
     }
 
