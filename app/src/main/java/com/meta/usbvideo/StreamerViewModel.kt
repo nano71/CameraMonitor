@@ -353,6 +353,22 @@ class StreamerViewModel(
         }
     }
 
+    fun getVideoStreamInfoString(): String {
+        val videoStatsLine =
+            UsbVideoNativeLibrary.streamingStatsSummaryString()
+                .lineSequence()
+                .map { it.trim() }
+                .filter { it.contains("x") && it.contains("fps") }
+                .lastOrNull()
+
+        if (videoStatsLine != null) {
+            return videoStatsLine
+        }
+        val selectedVideoFormat = videoFormat ?: return ""
+        return "${selectedVideoFormat.fourccFormat} ${selectedVideoFormat.width}x${selectedVideoFormat.height} @${selectedVideoFormat.fps} fps"
+    }
+
+
     suspend fun requestCameraPermission() {
         cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         updateCameraPermissionState(CameraPermissionRequested)

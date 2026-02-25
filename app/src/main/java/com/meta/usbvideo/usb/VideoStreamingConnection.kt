@@ -23,6 +23,7 @@ import com.meta.usbvideo.UsbVideoNativeLibrary
 import com.meta.usbvideo.eventloop.EventLooper
 import java.io.Closeable
 import java.nio.ByteBuffer
+import kotlin.math.roundToInt
 
 private const val TAG = "VideoStreamingConnection"
 
@@ -197,7 +198,7 @@ class VideoStreamingConnection(
         val byAspectRatio: Map<Pair<Int, Int>, List<VideoFormat>> =
             supportedFormats.groupBy { it.aspectRatio }
 
-        return byAspectRatio.get(aspectRatio)?.let { formats: List<VideoFormat> ->
+        return byAspectRatio[aspectRatio]?.let { formats: List<VideoFormat> ->
             val (betterHalf, lesserHalf) = formats.partition { it.area >= area }
             betterHalf.minByOrNull { it.area } ?: lesserHalf.maxBy { it.area }
         }

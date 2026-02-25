@@ -67,25 +67,30 @@ class StreamingViewHolder(
 
                 override fun onSurfaceTextureDestroyed(surfaceTexture: SurfaceTexture): Boolean {
                     Log.d(TAG, "onSurfaceTextureDestroyed() called with: surface = $surfaceTexture")
+                    videoFrame.updateVideoInfo("")
                     streamerViewModel.surfaceTextureDestroyed(surfaceTexture)
                     return true
                 }
 
                 override fun onSurfaceTextureUpdated(surfaceTexture: SurfaceTexture) {
-                    if (overlayMode == OverlayMode.NONE) {
-                        return
-                    }
                     val now = SystemClock.uptimeMillis()
                     if (now - lastUpdatedAt > 999) {
-                        val streamingStatsSummaryText =
-                            if (overlayMode == OverlayMode.TOGGLE_TIP) {
-                                rootView.context.getText(R.string.streaming_stats_toggle_tip)
-                            } else {
-                                streamerViewModel.getStreamingStatsSummaryString()
-                            }
-                        streamingStats.text = streamingStatsSummaryText
-                        streamingStats.isVisible = streamingStatsSummaryText.isNotEmpty()
+                        videoFrame.updateVideoInfo(streamerViewModel.getVideoStreamInfoString())
+
+                        if (overlayMode != OverlayMode.NONE) {
+                            val streamingStatsSummaryText =
+                                if (overlayMode == OverlayMode.TOGGLE_TIP) {
+                                    rootView.context.getText(R.string.streaming_stats_toggle_tip)
+                                } else {
+                                    streamerViewModel.getStreamingStatsSummaryString()
+                                }
+                            streamingStats.text = streamingStatsSummaryText
+                            streamingStats.isVisible = streamingStatsSummaryText.isNotEmpty()
+                        }
                         lastUpdatedAt = now
+                    }
+                    if (overlayMode == OverlayMode.NONE) {
+                        return
                     }
 
                     if (stateTransitionAt == 0L) {
@@ -114,6 +119,7 @@ class StreamingViewHolder(
         val width = videoFormat?.width ?: 1920
         val height = videoFormat?.height ?: 1080
         videoFrame.addVideoTextureView(videoTextureView, width, height)
+        videoFrame.updateVideoInfo(streamerViewModel.getVideoStreamInfoString())
         if (overlayMode == OverlayMode.STREAMING_STATS) {
             updateOverlayMode(OverlayMode.NONE)
         } else {
