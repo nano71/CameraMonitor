@@ -27,6 +27,13 @@ import androidx.viewpager2.widget.ViewPager2
 import com.meta.usbvideo.animation.ZoomOutPageTransformer
 import com.meta.usbvideo.permission.getCameraPermissionState
 import com.meta.usbvideo.permission.getRecordAudioPermissionState
+import com.meta.usbvideo.viewModel.DismissStreamingScreen
+import com.meta.usbvideo.viewModel.Initialize
+import com.meta.usbvideo.viewModel.PresentStreamingScreen
+import com.meta.usbvideo.viewModel.RequestCameraPermission
+import com.meta.usbvideo.viewModel.RequestRecordAudioPermission
+import com.meta.usbvideo.viewModel.RequestUsbPermission
+import com.meta.usbvideo.viewModel.StreamerViewModel
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch

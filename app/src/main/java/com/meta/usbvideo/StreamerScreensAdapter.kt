@@ -21,17 +21,19 @@ import android.view.ViewGroup
 import androidx.annotation.LayoutRes
 import androidx.lifecycle.LifecycleOwner
 import androidx.recyclerview.widget.RecyclerView
+import com.meta.usbvideo.viewHolder.StatusScreenViewHolder
+import com.meta.usbvideo.viewHolder.StreamingViewHolder
+import com.meta.usbvideo.viewModel.StreamerViewModel
 
-sealed class StreamerScreenViewHolder(rootView: View) : RecyclerView.ViewHolder(rootView)
 
 class StreamerScreensAdapter(
     val lifecycleOwner: LifecycleOwner,
     private val streamerViewModel: StreamerViewModel,
-) : RecyclerView.Adapter<StreamerScreenViewHolder>() {
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     var screens: List<StreamerScreen> = listOf(StreamerScreen.Status)
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): StreamerScreenViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         return when (StreamerScreen.entries[viewType]) {
             StreamerScreen.Status ->
                 StatusScreenViewHolder(
@@ -50,7 +52,7 @@ class StreamerScreensAdapter(
     fun ViewGroup.inflate(@LayoutRes layoutRes: Int): View =
         LayoutInflater.from(context).inflate(layoutRes, this, false)
 
-    override fun onBindViewHolder(holder: StreamerScreenViewHolder, position: Int) {
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (holder) {
             is StatusScreenViewHolder -> holder.observeViewModel(lifecycleOwner, streamerViewModel)
             is StreamingViewHolder -> Unit

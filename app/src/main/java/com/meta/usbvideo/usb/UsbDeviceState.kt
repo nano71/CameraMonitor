@@ -16,6 +16,8 @@
 package com.meta.usbvideo.usb
 
 import android.hardware.usb.UsbDevice
+import com.meta.usbvideo.connection.AudioStreamingConnection
+import com.meta.usbvideo.connection.VideoStreamingConnection
 
 /**
  * ADT to describe the state of a USB device. This is used by the <code>UvcDevice</code> object to

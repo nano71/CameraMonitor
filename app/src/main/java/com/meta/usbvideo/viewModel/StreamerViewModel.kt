@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.meta.usbvideo
+package com.meta.usbvideo.viewModel
 
 import android.Manifest
 import android.app.Application
@@ -38,6 +38,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewModelScope
+import com.meta.usbvideo.R
+import com.meta.usbvideo.UsbSpeed
+import com.meta.usbvideo.UsbVideoNativeLibrary
+import com.meta.usbvideo.connection.VideoFormat
 import com.meta.usbvideo.eventloop.EventLooper
 import com.meta.usbvideo.permission.CameraPermissionRequested
 import com.meta.usbvideo.permission.CameraPermissionRequired
@@ -53,7 +57,6 @@ import com.meta.usbvideo.usb.UsbMonitor
 import com.meta.usbvideo.usb.UsbMonitor.findUvcDevice
 import com.meta.usbvideo.usb.UsbMonitor.getUsbManager
 import com.meta.usbvideo.usb.UsbMonitor.setState
-import com.meta.usbvideo.usb.VideoFormat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow

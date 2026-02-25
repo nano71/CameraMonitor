@@ -20,6 +20,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.meta.usbvideo.permission.CameraPermissionState
 import com.meta.usbvideo.permission.RecordAudioPermissionState
+import com.meta.usbvideo.viewModel.StreamerViewModel
 
 class StreamerViewModelFactory(
     private val cameraPermission: CameraPermissionState,

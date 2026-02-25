@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.meta.usbvideo
+package com.meta.usbvideo.viewHolder
 
 import android.graphics.SurfaceTexture
 import android.os.SystemClock
@@ -22,14 +22,17 @@ import android.view.TextureView
 import android.view.View
 import android.widget.TextView
 import androidx.core.view.isVisible
+import androidx.recyclerview.widget.RecyclerView
+import com.meta.usbvideo.R
 import com.meta.usbvideo.ui.VideoContainerView
+import com.meta.usbvideo.viewModel.StreamerViewModel
 
 private const val TAG = "StreamingViewHolder"
 
 class StreamingViewHolder(
     private val rootView: View,
     private val streamerViewModel: StreamerViewModel,
-) : StreamerScreenViewHolder(rootView) {
+) : RecyclerView.ViewHolder(rootView) {
 
     private var overlayMode: OverlayMode = OverlayMode.INITIAL_STATS
     val streamingStats: TextView = rootView.findViewById(R.id.streaming_stats)

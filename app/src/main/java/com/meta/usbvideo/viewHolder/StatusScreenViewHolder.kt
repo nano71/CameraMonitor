@@ -1,19 +1,4 @@
-/*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-package com.meta.usbvideo
+package com.meta.usbvideo.viewHolder
 
 import android.content.Context
 import android.view.View
@@ -22,6 +7,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.RecyclerView
+import com.meta.usbvideo.R
+import com.meta.usbvideo.UsbVideoNativeLibrary
 import com.meta.usbvideo.permission.CameraPermissionDenied
 import com.meta.usbvideo.permission.CameraPermissionGranted
 import com.meta.usbvideo.permission.CameraPermissionRequested
@@ -34,6 +22,7 @@ import com.meta.usbvideo.permission.RecordAudioPermissionRequired
 import com.meta.usbvideo.permission.RecordAudioPermissionState
 import com.meta.usbvideo.usb.UsbDeviceState
 import com.meta.usbvideo.usb.UsbMonitor
+import com.meta.usbvideo.viewModel.StreamerViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -41,7 +30,7 @@ import kotlinx.coroutines.launch
 class StatusScreenViewHolder(
     private val rootView: View,
     private val streamerViewModel: StreamerViewModel,
-) : StreamerScreenViewHolder(rootView) {
+) : RecyclerView.ViewHolder(rootView) {
     private val appPermissionsStatus: TextView = rootView.findViewById(R.id.app_permissions_status)
     private val usbDeviceStatus: TextView = rootView.findViewById(R.id.usb_device_status)
     private val audioStreamingStatus: TextView = rootView.findViewById(R.id.audio_streaming_status)

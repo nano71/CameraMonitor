@@ -19,10 +19,10 @@ import android.content.Context
 import android.media.AudioManager
 import android.media.AudioTrack
 import android.view.Surface
-import com.meta.usbvideo.usb.AudioStreamingConnection
-import com.meta.usbvideo.usb.AudioStreamingFormatTypeDescriptor
-import com.meta.usbvideo.usb.VideoFormat
-import com.meta.usbvideo.usb.VideoStreamingConnection
+import com.meta.usbvideo.connection.AudioStreamingConnection
+import com.meta.usbvideo.connection.AudioStreamingFormatTypeDescriptor
+import com.meta.usbvideo.connection.VideoFormat
+import com.meta.usbvideo.connection.VideoStreamingConnection
 
 enum class UsbSpeed {
     Unknown,

@@ -17,19 +17,20 @@
 package com.meta.usbvideo.usb
 
 import android.hardware.usb.UsbDevice
-import android.util.Log
 import android.hardware.usb.UsbDeviceConnection
+import android.util.Log
+import com.meta.usbvideo.connection.VideoFormat
+import com.meta.usbvideo.connection.VideoStreamingConnection
 import io.mockk.MockKAnnotations
 import io.mockk.every
-import io.mockk.mockkStatic
 import io.mockk.impl.annotations.MockK
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
+import io.mockk.mockkStatic
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
-/** Tests [VideoStreamingConnection] */
+/** Tests [com.meta.usbvideo.connection.VideoStreamingConnection] */
 class VideoStreamingConnectionTests {
     @MockK(relaxed = true)
     private lateinit var usbDevice: UsbDevice
