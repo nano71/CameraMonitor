@@ -29,42 +29,43 @@ class StreamerScreensAdapter(
     private val streamerViewModel: StreamerViewModel,
 ) : RecyclerView.Adapter<StreamerScreenViewHolder>() {
 
-  var screens: List<StreamerScreen> = listOf(StreamerScreen.Status)
+    var screens: List<StreamerScreen> = listOf(StreamerScreen.Status)
 
-  override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): StreamerScreenViewHolder {
-    return when (StreamerScreen.values()[viewType]) {
-      StreamerScreen.Status ->
-          StatusScreenViewHolder(
-              parent.inflate(R.layout.status_screen),
-              streamerViewModel,
-          )
-      StreamerScreen.Streaming ->
-          StreamingViewHolder(
-              parent.inflate(R.layout.streaming_screen),
-              streamerViewModel,
-          )
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): StreamerScreenViewHolder {
+        return when (StreamerScreen.entries[viewType]) {
+            StreamerScreen.Status ->
+                StatusScreenViewHolder(
+                    parent.inflate(R.layout.status_screen),
+                    streamerViewModel,
+                )
+
+            StreamerScreen.Streaming ->
+                StreamingViewHolder(
+                    parent.inflate(R.layout.streaming_screen),
+                    streamerViewModel,
+                )
+        }
     }
-  }
 
-  fun ViewGroup.inflate(@LayoutRes layoutRes: Int): View =
-      LayoutInflater.from(context).inflate(layoutRes, this, false)
+    fun ViewGroup.inflate(@LayoutRes layoutRes: Int): View =
+        LayoutInflater.from(context).inflate(layoutRes, this, false)
 
-  override fun onBindViewHolder(holder: StreamerScreenViewHolder, position: Int) {
-    when (holder) {
-      is StatusScreenViewHolder -> holder.observeViewModel(lifecycleOwner, streamerViewModel)
-      is StreamingViewHolder -> Unit
+    override fun onBindViewHolder(holder: StreamerScreenViewHolder, position: Int) {
+        when (holder) {
+            is StatusScreenViewHolder -> holder.observeViewModel(lifecycleOwner, streamerViewModel)
+            is StreamingViewHolder -> Unit
+        }
     }
-  }
 
-  override fun getItemCount(): Int {
-    return screens.size
-  }
+    override fun getItemCount(): Int {
+        return screens.size
+    }
 
-  override fun getItemId(position: Int): Long {
-    return position.toLong()
-  }
+    override fun getItemId(position: Int): Long {
+        return position.toLong()
+    }
 
-  override fun getItemViewType(position: Int): Int {
-    return screens[position].ordinal
-  }
+    override fun getItemViewType(position: Int): Int {
+        return screens[position].ordinal
+    }
 }

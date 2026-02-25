@@ -35,53 +35,53 @@ import kotlin.coroutines.suspendCoroutine
  */
 object EventLooper {
 
-  private val TAG = "EventLooper"
-  private val lock = CountDownLatch(1)
-  private lateinit var looper: Looper
-  private lateinit var handler: Handler
+    private val TAG = "EventLooper"
+    private val lock = CountDownLatch(1)
+    private lateinit var looper: Looper
+    private lateinit var handler: Handler
 
-  init {
-    thread(name = "EventLooper") {
-      Looper.prepare()
-      looper = requireNotNull(Looper.myLooper())
-      handler = Handler(looper)
-      lock.countDown()
-      Looper.loop()
-    }
-    Log.i(TAG, "EventLooper initialized")
-  }
-
-  fun getLooper(): Looper {
-    lock.await()
-    return looper
-  }
-
-  fun getHandler(): Handler {
-    lock.await()
-    return handler
-  }
-
-  fun post(runnable: Runnable) {
-    lock.await()
-    handler.post(runnable)
-  }
-
-  suspend fun <T> call(callable: Callable<T>): T {
-    return suspendCoroutine { cont ->
-      post {
-        @Suppress("CatchGeneralException")
-        try {
-          val t: T = callable.call()
-          cont.resume(t)
-        } catch (e: Exception) {
-          cont.resumeWithException(e)
+    init {
+        thread(name = "EventLooper") {
+            Looper.prepare()
+            looper = requireNotNull(Looper.myLooper())
+            handler = Handler(looper)
+            lock.countDown()
+            Looper.loop()
         }
-      }
+        Log.i(TAG, "EventLooper initialized")
     }
-  }
 
-  fun postDelayed(runnable: Runnable, delayMillis: Long) {
-    lock.await()
-    handler.postDelayed(runnable, delayMillis)
-  }
+    fun getLooper(): Looper {
+        lock.await()
+        return looper
+    }
+
+    fun getHandler(): Handler {
+        lock.await()
+        return handler
+    }
+
+    fun post(runnable: Runnable) {
+        lock.await()
+        handler.post(runnable)
+    }
+
+    suspend fun <T> call(callable: Callable<T>): T {
+        return suspendCoroutine { cont ->
+            post {
+                @Suppress("CatchGeneralException")
+                try {
+                    val t: T = callable.call()
+                    cont.resume(t)
+                } catch (e: Exception) {
+                    cont.resumeWithException(e)
+                }
+            }
+        }
+    }
+
+    fun postDelayed(runnable: Runnable, delayMillis: Long) {
+        lock.await()
+        handler.postDelayed(runnable, delayMillis)
+    }
 }

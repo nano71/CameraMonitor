@@ -25,21 +25,21 @@ class PermissionsViewModel(
     recordAudioPermission: RecordAudioPermissionState,
 ) : ViewModel() {
 
-  private val cameraPermissionInternalState: MutableStateFlow<CameraPermissionState> =
-      MutableStateFlow(cameraPermission)
-  val cameraPermissionStateFlow: StateFlow<CameraPermissionState> =
-      cameraPermissionInternalState.asStateFlow()
+    private val cameraPermissionInternalState: MutableStateFlow<CameraPermissionState> =
+        MutableStateFlow(cameraPermission)
+    val cameraPermissionStateFlow: StateFlow<CameraPermissionState> =
+        cameraPermissionInternalState.asStateFlow()
 
-  private val recordAudioPermissionInternalState: MutableStateFlow<RecordAudioPermissionState> =
-      MutableStateFlow(recordAudioPermission)
-  val recordAudioPermissionStateFlow: StateFlow<RecordAudioPermissionState> =
-      recordAudioPermissionInternalState.asStateFlow()
+    private val recordAudioPermissionInternalState: MutableStateFlow<RecordAudioPermissionState> =
+        MutableStateFlow(recordAudioPermission)
+    val recordAudioPermissionStateFlow: StateFlow<RecordAudioPermissionState> =
+        recordAudioPermissionInternalState.asStateFlow()
 
-  fun updateCameraPermissionState(cameraPermission: CameraPermissionState) {
-    cameraPermissionInternalState.value = cameraPermission
-  }
+    fun updateCameraPermissionState(cameraPermission: CameraPermissionState) {
+        cameraPermissionInternalState.value = cameraPermission
+    }
 
-  fun updateRecordAudioPermissionState(recordAudioPermission: RecordAudioPermissionState) {
-    recordAudioPermissionInternalState.value = recordAudioPermission
-  }
+    fun updateRecordAudioPermissionState(recordAudioPermission: RecordAudioPermissionState) {
+        recordAudioPermissionInternalState.value = recordAudioPermission
+    }
 }

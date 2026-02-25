@@ -28,33 +28,33 @@ import kotlin.math.abs
  */
 class VideoContainerView(context: Context, attrs: AttributeSet) : FrameLayout(context, attrs) {
 
-  private var videoView: TextureView? = null
+    private var videoView: TextureView? = null
 
-  fun addVideoTextureView(videoView: TextureView, width: Int, height: Int) {
-    this.videoView = videoView
-    addView(videoView, FrameLayout.LayoutParams(width, height, Gravity.CENTER))
-  }
-
-  override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
-    super.onLayout(changed, left, top, right, bottom)
-    val videoView = this.videoView ?: return
-    val width = videoView.width
-    val height = videoView.height
-    if (width > 0 && height > 0) {
-      videoView.pivotX = width.toFloat() / 2f
-      videoView.pivotY = height.toFloat() / 2f
-      val scaleX = abs(right - left).toFloat() / width
-      val scaleY = abs(bottom - top).toFloat() / height
-      if (abs(scaleX - 1.0) > 0.0001) {
-        videoView.scaleX = scaleX
-      } else {
-        videoView.scaleX = 1.0f
-      }
-      if (abs(scaleY - 1.0) > 0.0001) {
-        videoView.scaleY = scaleY
-      } else {
-        videoView.scaleY = 1.0f
-      }
+    fun addVideoTextureView(videoView: TextureView, width: Int, height: Int) {
+        this.videoView = videoView
+        addView(videoView, FrameLayout.LayoutParams(width, height, Gravity.CENTER))
     }
-  }
+
+    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        super.onLayout(changed, left, top, right, bottom)
+        val videoView = this.videoView ?: return
+        val width = videoView.width
+        val height = videoView.height
+        if (width > 0 && height > 0) {
+            videoView.pivotX = width.toFloat() / 2f
+            videoView.pivotY = height.toFloat() / 2f
+            val scaleX = abs(right - left).toFloat() / width
+            val scaleY = abs(bottom - top).toFloat() / height
+            if (abs(scaleX - 1.0) > 0.0001) {
+                videoView.scaleX = scaleX
+            } else {
+                videoView.scaleX = 1.0f
+            }
+            if (abs(scaleY - 1.0) > 0.0001) {
+                videoView.scaleY = scaleY
+            } else {
+                videoView.scaleY = 1.0f
+            }
+        }
+    }
 }

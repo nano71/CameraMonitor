@@ -20,36 +20,36 @@ import android.app.Activity
 import android.content.pm.PackageManager
 
 fun Activity.getPermissionStatus(permission: String): PermissionStatus {
-  val isGranted = checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
-  return if (isGranted) {
-    PermissionGranted
-  } else if (shouldShowRequestPermissionRationale(permission)) {
-    PermissionDenied
-  } else {
-    PermissionRequired
-  }
+    val isGranted = checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
+    return if (isGranted) {
+        PermissionGranted
+    } else if (shouldShowRequestPermissionRationale(permission)) {
+        PermissionDenied
+    } else {
+        PermissionRequired
+    }
 }
 
 fun Activity.getCameraPermissionState(): CameraPermissionState {
-  return getPermissionStatus(Manifest.permission.CAMERA).toCameraState()
+    return getPermissionStatus(Manifest.permission.CAMERA).toCameraState()
 }
 
 fun Activity.getRecordAudioPermissionState(): RecordAudioPermissionState {
-  return getPermissionStatus(Manifest.permission.RECORD_AUDIO).toRecordAudioState()
+    return getPermissionStatus(Manifest.permission.RECORD_AUDIO).toRecordAudioState()
 }
 
 fun PermissionStatus.toCameraState(): CameraPermissionState {
-  return when (this) {
-    PermissionGranted -> CameraPermissionGranted
-    PermissionRequired -> CameraPermissionRequired
-    PermissionDenied -> CameraPermissionDenied
-  }
+    return when (this) {
+        PermissionGranted -> CameraPermissionGranted
+        PermissionRequired -> CameraPermissionRequired
+        PermissionDenied -> CameraPermissionDenied
+    }
 }
 
 fun PermissionStatus.toRecordAudioState(): RecordAudioPermissionState {
-  return when (this) {
-    PermissionGranted -> RecordAudioPermissionGranted
-    PermissionRequired -> RecordAudioPermissionRequired
-    PermissionDenied -> RecordAudioPermissionDenied
-  }
+    return when (this) {
+        PermissionGranted -> RecordAudioPermissionGranted
+        PermissionRequired -> RecordAudioPermissionRequired
+        PermissionDenied -> RecordAudioPermissionDenied
+    }
 }

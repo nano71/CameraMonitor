@@ -25,108 +25,123 @@ import com.meta.usbvideo.usb.VideoFormat
 import com.meta.usbvideo.usb.VideoStreamingConnection
 
 enum class UsbSpeed {
-  Unknown,
-  Low,
-  Full,
-  High,
-  Super,
+    Unknown,
+    Low,
+    Full,
+    High,
+    Super,
+    SuperPlus,
 }
 
 object UsbVideoNativeLibrary {
 
-  fun getUsbSpeed(): UsbSpeed = UsbSpeed.values()[getUsbDeviceSpeed()]
+    fun getUsbSpeed(): UsbSpeed = UsbSpeed.entries[getUsbDeviceSpeed()]
 
-  private external fun getUsbDeviceSpeed(): Int
-
-  fun connectUsbAudioStreaming(
-      context: Context,
-      audioStreamingConnection: AudioStreamingConnection,
-  ): Pair<Boolean, String> {
-    if (!audioStreamingConnection.supportsAudioStreaming) {
-      return false to "No Audio Streaming Interface"
+    fun getUsbSpeedString(): String {
+        return when (getUsbSpeed()) {
+            UsbSpeed.Unknown -> "Unknown speed"
+            UsbSpeed.Low -> "Low speed (1.5 Mbps)"
+            UsbSpeed.Full -> "Full speed (12 Mbps)"
+            UsbSpeed.High -> "High speed (480 Mbps)"
+            UsbSpeed.Super -> "SuperSpeed (5 Gbps)"
+            UsbSpeed.SuperPlus -> "SuperSpeed+ (10 Gbps)"
+        }
     }
 
-    val audioFormat =
-        audioStreamingConnection.supportedAudioFormat ?: return false to "No Supported Audio Format"
+    private external fun getUsbDeviceSpeed(): Int
 
-    if (!audioStreamingConnection.hasFormatTypeDescriptor) {
-      return false to "No Audio Streaming Format Descriptor"
+    fun connectUsbAudioStreaming(
+        context: Context,
+        audioStreamingConnection: AudioStreamingConnection,
+    ): Pair<Boolean, String> {
+        if (!audioStreamingConnection.supportsAudioStreaming) {
+            return false to "No Audio Streaming Interface"
+        }
+
+        val audioFormat =
+            audioStreamingConnection.supportedAudioFormat ?: return false to "No Supported Audio Format"
+
+        if (!audioStreamingConnection.hasFormatTypeDescriptor) {
+            return false to "No Audio Streaming Format Descriptor"
+        }
+
+        val format: AudioStreamingFormatTypeDescriptor = audioStreamingConnection.formatTypeDescriptor
+
+        val channelCount = format.bNrChannels
+        val samplingFrequency = format.tSamFreq.firstOrNull() ?: return false to "No Sample Rate"
+        val subFrameSize = format.bSubFrameSize
+        val audioManager: AudioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val outputFramesPerBuffer =
+            audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER)?.toInt() ?: 0
+
+        val deviceFD = audioStreamingConnection.deviceFD
+
+        return if (connectUsbAudioStreamingNative(
+                deviceFD,
+                audioFormat,
+                samplingFrequency,
+                subFrameSize,
+                channelCount,
+                AudioTrack.PERFORMANCE_MODE_LOW_LATENCY,
+                outputFramesPerBuffer,
+            )
+        ) {
+            true to "Success"
+        } else {
+            false to "Native audio player failure. Check logs for errors."
+        }
     }
 
-    val format: AudioStreamingFormatTypeDescriptor = audioStreamingConnection.formatTypeDescriptor
+    private external fun connectUsbAudioStreamingNative(
+        deviceFD: Int,
+        jAudioFormat: Int,
+        samplingFrequency: Int,
+        subFrameSize: Int,
+        channelCount: Int,
+        jAudioPerfMode: Int,
+        outputFramesPerBuffer: Int,
+    ): Boolean
 
-    val channelCount = format.bNrChannels
-    val samplingFrequency = format.tSamFreq.firstOrNull() ?: return false to "No Sample Rate"
-    val subFrameSize = format.bSubFrameSize
-    val audioManager: AudioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-    val outputFramesPerBuffer =
-        audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER)?.toInt() ?: 0
+    external fun disconnectUsbAudioStreamingNative()
 
-    val deviceFD = audioStreamingConnection.deviceFD
+    external fun startUsbAudioStreamingNative()
 
-    return if (connectUsbAudioStreamingNative(
-        deviceFD,
-        audioFormat,
-        samplingFrequency,
-        subFrameSize,
-        channelCount,
-        AudioTrack.PERFORMANCE_MODE_LOW_LATENCY,
-        outputFramesPerBuffer,
-    )) {
-      true to "Success"
-    } else {
-      false to "Native audio player failure. Check logs for errors."
+    external fun stopUsbAudioStreamingNative()
+
+    fun connectUsbVideoStreaming(
+        videoStreamingConnection: VideoStreamingConnection,
+        surface: Surface,
+        frameFormat: VideoFormat?,
+    ): Pair<Boolean, String> {
+        val videoFormat = frameFormat ?: return false to "No supported video format"
+        val deviceFD = videoStreamingConnection.deviceFD
+        return if (connectUsbVideoStreamingNative(
+                deviceFD,
+                videoFormat.width,
+                videoFormat.height,
+                videoFormat.fps,
+                videoFormat.toLibuvcFrameFormat().ordinal,
+                surface,
+            )
+        ) {
+            true to "Success"
+        } else {
+            false to "Native video player failure. Check logs for errors."
+        }
     }
-  }
 
-  private external fun connectUsbAudioStreamingNative(
-      deviceFD: Int,
-      jAudioFormat: Int,
-      samplingFrequency: Int,
-      subFrameSize: Int,
-      channelCount: Int,
-      jAudioPerfMode: Int,
-      outputFramesPerBuffer: Int,
-  ): Boolean
+    external fun connectUsbVideoStreamingNative(
+        deviceFD: Int,
+        width: Int,
+        height: Int,
+        fps: Int,
+        libuvcFrameFormat: Int,
+        surface: Surface,
+    ): Boolean
 
-  external fun disconnectUsbAudioStreamingNative()
+    external fun startUsbVideoStreamingNative(): Boolean
+    external fun stopUsbVideoStreamingNative()
+    external fun disconnectUsbVideoStreamingNative()
 
-  external fun startUsbAudioStreamingNative()
-
-  external fun stopUsbAudioStreamingNative()
-
-  fun connectUsbVideoStreaming(
-      videoStreamingConnection: VideoStreamingConnection,
-      surface: Surface,
-      frameFormat: VideoFormat?,
-  ): Pair<Boolean, String> {
-    val videoFormat = frameFormat ?: return false to "No supported video format"
-    val deviceFD = videoStreamingConnection.deviceFD
-    return if (connectUsbVideoStreamingNative(
-        deviceFD,
-        videoFormat.width,
-        videoFormat.height,
-        videoFormat.fps,
-        videoFormat.toLibuvcFrameFormat().ordinal,
-        surface,
-    )) {
-      true to "Success"
-    } else {
-      false to "Native video player failure. Check logs for errors."
-    }
-  }
-
-  external fun connectUsbVideoStreamingNative(
-    deviceFD: Int,
-    width: Int,
-    height: Int,
-    fps: Int,
-    libuvcFrameFormat: Int,
-    surface: Surface,
-  ): Boolean
-  external fun startUsbVideoStreamingNative(): Boolean
-  external fun stopUsbVideoStreamingNative()
-  external fun disconnectUsbVideoStreamingNative()
-
-  external fun streamingStatsSummaryString(): String
+    external fun streamingStatsSummaryString(): String
 }

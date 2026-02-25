@@ -43,24 +43,24 @@ private const val REQUEST_TIMEOUT_MS = 1000
  * data types and making requets to the USB device.
  */
 class UsbDescriptorParser(private val rawDescriptors: ByteArray) {
-  fun descriptors(): Sequence<Descriptor> =
-      sequence<Descriptor> {
-        val pack: ByteBuffer = ByteBuffer.wrap(rawDescriptors).order(ByteOrder.LITTLE_ENDIAN)
-        while (pack.hasRemaining()) {
-          val pos: Int = pack.position()
-          val len: Int = pack.getBInt(pos)
-          val type: Int = pack.getBInt(pos + 1)
-          yield(
-              Descriptor(
-                  pos,
-                  len,
-                  type,
-                  ByteBuffer.wrap(rawDescriptors, pos, len).order(ByteOrder.LITTLE_ENDIAN),
-              ),
-          )
-          pack.position(pos + len)
+    fun descriptors(): Sequence<Descriptor> =
+        sequence<Descriptor> {
+            val pack: ByteBuffer = ByteBuffer.wrap(rawDescriptors).order(ByteOrder.LITTLE_ENDIAN)
+            while (pack.hasRemaining()) {
+                val pos: Int = pack.position()
+                val len: Int = pack.getBInt(pos)
+                val type: Int = pack.getBInt(pos + 1)
+                yield(
+                    Descriptor(
+                        pos,
+                        len,
+                        type,
+                        ByteBuffer.wrap(rawDescriptors, pos, len).order(ByteOrder.LITTLE_ENDIAN),
+                    ),
+                )
+                pack.position(pos + len)
+            }
         }
-      }
 }
 
 /** A generic USB descriptor with a <code>ByteBuffer</code> in little-endian byte order */
@@ -70,18 +70,18 @@ class Descriptor(
     val bDescriptorType: Int,
     val buffer: ByteBuffer,
 ) {
-  fun isIADDescriptor(): Boolean {
-    return bDescriptorType == USB_DT_IAD
-  }
+    fun isIADDescriptor(): Boolean {
+        return bDescriptorType == USB_DT_IAD
+    }
 
-  fun isInterfaceDescriptorAtLeastOneEndpoint(): Boolean {
-    return bDescriptorType == USB_DT_DEVICE_INTERFACE && buffer.getBInt(offset + 4) > 0
-  }
+    fun isInterfaceDescriptorAtLeastOneEndpoint(): Boolean {
+        return bDescriptorType == USB_DT_DEVICE_INTERFACE && buffer.getBInt(offset + 4) > 0
+    }
 
-  fun isEndpointDescriptorWithDirIN(): Boolean {
-    return bDescriptorType == USB_DT_DEVICE_ENDPOINT &&
-        buffer.getBInt(offset + 2) and USB_ENDPOINT_DIR_IN == USB_ENDPOINT_DIR_IN
-  }
+    fun isEndpointDescriptorWithDirIN(): Boolean {
+        return bDescriptorType == USB_DT_DEVICE_ENDPOINT &&
+                buffer.getBInt(offset + 2) and USB_ENDPOINT_DIR_IN == USB_ENDPOINT_DIR_IN
+    }
 }
 
 /**
@@ -102,21 +102,21 @@ class Descriptor(
  * </pre>
  */
 class IADDescriptor(pack: ByteBuffer) {
-  val bLength: Int = pack.getBInt()
-  val bDescriptorType: Int = pack.getBInt()
-  val bFirstInterface: Int = pack.getBInt()
-  val bInterfaceCount: Int = pack.getBInt()
-  val bFunctionClass: Int = pack.getBInt()
-  val bFunctionSubClass: Int = pack.getBInt()
-  val bFunctionProtocol: Int = pack.getBInt()
-  val iFunction: Int = pack.getBInt()
+    val bLength: Int = pack.getBInt()
+    val bDescriptorType: Int = pack.getBInt()
+    val bFirstInterface: Int = pack.getBInt()
+    val bInterfaceCount: Int = pack.getBInt()
+    val bFunctionClass: Int = pack.getBInt()
+    val bFunctionSubClass: Int = pack.getBInt()
+    val bFunctionProtocol: Int = pack.getBInt()
+    val iFunction: Int = pack.getBInt()
 
-  fun getStringDescriptors(usbDeviceConnection: UsbDeviceConnection): Sequence<String> =
-      usbDeviceConnection.getStringDescriptors(iFunction)
+    fun getStringDescriptors(usbDeviceConnection: UsbDeviceConnection): Sequence<String> =
+        usbDeviceConnection.getStringDescriptors(iFunction)
 
-  fun hasAudioStreamingFunction(): Boolean {
-    return bFunctionClass == 0x1 && bFunctionSubClass == 0x02
-  }
+    fun hasAudioStreamingFunction(): Boolean {
+        return bFunctionClass == 0x1 && bFunctionSubClass == 0x02
+    }
 }
 
 /**
@@ -137,13 +137,13 @@ class IADDescriptor(pack: ByteBuffer) {
  * </pre>
  */
 class InterfaceDescriptor(pack: ByteBuffer) {
-  val bLength: Int = pack.getBInt()
-  val bDescriptorType: Int = pack.getBInt()
-  val bInterfaceNumber: Int = pack.getBInt()
-  val bAlternateSetting: Int = pack.getBInt()
-  val bNumEndpoints: Int = pack.getBInt()
-  val bInterfaceClass: Int = pack.getBInt()
-  val bInterfaceSubClass: Int = pack.getBInt()
+    val bLength: Int = pack.getBInt()
+    val bDescriptorType: Int = pack.getBInt()
+    val bInterfaceNumber: Int = pack.getBInt()
+    val bAlternateSetting: Int = pack.getBInt()
+    val bNumEndpoints: Int = pack.getBInt()
+    val bInterfaceClass: Int = pack.getBInt()
+    val bInterfaceSubClass: Int = pack.getBInt()
 }
 
 /**
@@ -162,52 +162,52 @@ class InterfaceDescriptor(pack: ByteBuffer) {
  * </pre>
  */
 class EndpointDescriptor(pack: ByteBuffer) {
-  val bLength: Int = pack.getBInt()
-  val bDescriptorType: Int = pack.getBInt()
-  val bEndpointAddress: Int = pack.getBInt()
-  val bmAttributes: Int = pack.getBInt()
-  val wMaxPacketSize: Int = pack.getWInt()
-  val bInterval: Int = pack.getBInt()
-  val bRefresh: Int = if (pack.hasRemaining()) pack.getBInt() else 0
-  val bSynchAddress: Int = if (pack.hasRemaining()) pack.getBInt() else 0
+    val bLength: Int = pack.getBInt()
+    val bDescriptorType: Int = pack.getBInt()
+    val bEndpointAddress: Int = pack.getBInt()
+    val bmAttributes: Int = pack.getBInt()
+    val wMaxPacketSize: Int = pack.getWInt()
+    val bInterval: Int = pack.getBInt()
+    val bRefresh: Int = if (pack.hasRemaining()) pack.getBInt() else 0
+    val bSynchAddress: Int = if (pack.hasRemaining()) pack.getBInt() else 0
 }
 
 fun UsbDeviceConnection.getStringDescriptors(index: Int): Sequence<String> {
-  // all the languages
-  val bufferSize = REQUEST_BUFFER_SIZE
-  val buffer = ByteArray(bufferSize)
-  val descriptorZeroLen =
-      controlTransfer(
-          USB_ENDPOINT_DIR_IN,
-          USB_REQUEST_GET_DESCRIPTOR,
-          (USB_DT_STRING shl 8) or 0,
-          0,
-          buffer,
-          bufferSize,
-          REQUEST_TIMEOUT_MS,
-      )
-  return sequence<Int> {
+    // all the languages
+    val bufferSize = REQUEST_BUFFER_SIZE
+    val buffer = ByteArray(bufferSize)
+    val descriptorZeroLen =
+        controlTransfer(
+            USB_ENDPOINT_DIR_IN,
+            USB_REQUEST_GET_DESCRIPTOR,
+            (USB_DT_STRING shl 8) or 0,
+            0,
+            buffer,
+            bufferSize,
+            REQUEST_TIMEOUT_MS,
+        )
+    return sequence<Int> {
         val buffer = ByteBuffer.wrap(buffer, 0, descriptorZeroLen).order(ByteOrder.LITTLE_ENDIAN)
         while (buffer.hasRemaining()) {
-          yield(buffer.getWInt())
+            yield(buffer.getWInt())
         }
-      }
-      .map { languageID ->
-        val stringDescriptorLen =
-            controlTransfer(
-                USB_ENDPOINT_DIR_IN,
-                USB_REQUEST_GET_DESCRIPTOR,
-                (USB_DT_STRING shl 8) or index,
-                languageID,
-                buffer,
-                bufferSize,
-                REQUEST_TIMEOUT_MS,
-            )
-        ByteBuffer.wrap(buffer, 0, stringDescriptorLen)
-            .order(ByteOrder.LITTLE_ENDIAN)
-            .asCharBuffer()
-            .toString()
-      }
+    }
+        .map { languageID ->
+            val stringDescriptorLen =
+                controlTransfer(
+                    USB_ENDPOINT_DIR_IN,
+                    USB_REQUEST_GET_DESCRIPTOR,
+                    (USB_DT_STRING shl 8) or index,
+                    languageID,
+                    buffer,
+                    bufferSize,
+                    REQUEST_TIMEOUT_MS,
+                )
+            ByteBuffer.wrap(buffer, 0, stringDescriptorLen)
+                .order(ByteOrder.LITTLE_ENDIAN)
+                .asCharBuffer()
+                .toString()
+        }
 }
 
 // Returns an int from three bytes in little-endian byte order

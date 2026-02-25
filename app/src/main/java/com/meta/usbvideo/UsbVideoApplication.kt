@@ -20,9 +20,9 @@ import com.meta.usbvideo.usb.UsbMonitor
 
 class UsbVideoApplication : Application() {
 
-  override fun onCreate() {
-    super.onCreate()
-    UsbMonitor.init(this)
-    System.loadLibrary("usbvideo")
-  }
+    override fun onCreate() {
+        super.onCreate()
+        UsbMonitor.init(this)
+        System.loadLibrary("usbvideo")
+    }
 }

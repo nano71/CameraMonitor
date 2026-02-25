@@ -43,8 +43,8 @@ private const val UVC_VS_FRAME_MJPEG: Int = 0x07
 private val SUPPORTED_VIDEO_FOURCC_FORMATS: Array<String> = arrayOf("YUY2", "NV12", "MJPG")
 
 private fun aspectRatio(width: Int, height: Int): Pair<Int, Int> {
-  val divisor = gcd(width, height)
-  return width / divisor to height / divisor
+    val divisor = gcd(width, height)
+    return width / divisor to height / divisor
 }
 
 private fun gcd(big: Int, small: Int): Int = if (small == 0) big else gcd(small, big % small)
@@ -53,213 +53,220 @@ class VideoStreamingConnection(
     private val usbDevice: UsbDevice,
     private val usbDeviceConnection: UsbDeviceConnection,
 ) : Closeable {
-  val deviceFD: Int = usbDeviceConnection.fileDescriptor
-  lateinit var iadDescriptor: IADDescriptor
-  lateinit var interfaceDescriptor: InterfaceDescriptor
-  lateinit var endpointDescriptor: EndpointDescriptor
+    val deviceFD: Int = usbDeviceConnection.fileDescriptor
+    lateinit var iadDescriptor: IADDescriptor
+    lateinit var interfaceDescriptor: InterfaceDescriptor
+    lateinit var endpointDescriptor: EndpointDescriptor
 
-  val videoFormats: List<VideoFormat>
+    val videoFormats: List<VideoFormat>
 
-  init {
-    @Suppress("CatchGeneralException")
-    videoFormats =
-        try {
-          parseRawDescriptors(usbDeviceConnection.rawDescriptors)
-        } catch (e: Exception) {
-          Log.e(TAG, "Error in parsing USB descriptors for video streaming", e)
-          emptyList<VideoFormat>()
-        }
-    Log.i(TAG, "---- Supported video formats and frame sizes ----")
-    videoFormats.forEach { Log.i(TAG, it.toString()) }
-  }
-
-  private fun parseRawDescriptors(rawDescriptors: ByteArray): List<VideoFormat> {
-    Log.i(TAG, "Parsing usb descriptors of ${usbDevice.productName} for video streaming")
-    val formatsBuilder = mutableListOf<VideoFormat>()
-    var fourccFormat: String? = null
-    for (descriptor in UsbDescriptorParser(rawDescriptors).descriptors()) {
-      when {
-        !::iadDescriptor.isInitialized ->
-            if (descriptor.isIADDescriptorWithVideoStreamingFunction()) {
-              Log.i(TAG, "Found IAD descriptor with video streaming function")
-              iadDescriptor = IADDescriptor(descriptor.buffer)
+    init {
+        @Suppress("CatchGeneralException")
+        videoFormats =
+            try {
+                parseRawDescriptors(usbDeviceConnection.rawDescriptors)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in parsing USB descriptors for video streaming", e)
+                emptyList<VideoFormat>()
             }
-        !::interfaceDescriptor.isInitialized &&
-            descriptor.isInterfaceDescriptorAtLeastOneEndpoint() &&
-            descriptor.isInterfaceDescriptorWithVideoStreaming() -> {
-          Log.i(TAG, "Found device interface with video streaming and endpoint > 0")
-          interfaceDescriptor = InterfaceDescriptor(descriptor.buffer)
-        }
-        descriptor.isVSUncompressedFormatTypeDescriptor() -> {
-          val uncompressedFormatDescriptor = VSUncompressedFormatDescriptor(descriptor.buffer)
-          fourccFormat = uncompressedFormatDescriptor.fourccFormat
-        }
-        descriptor.isMJPEGVideoFormatDescriptor() -> {
-          val mjpegFormatDescriptor = VSMjpegFormatDescriptor(descriptor.buffer)
-          fourccFormat = mjpegFormatDescriptor.fourccFormat
-        }
-        descriptor.isVSFrameDescriptor() -> {
-          if (fourccFormat != null) {
-            val vsFrameDescriptor = VSFrameDescriptor(descriptor.buffer)
-            formatsBuilder.add(
-                VideoFormat(
-                    fourccFormat,
-                    vsFrameDescriptor.width(),
-                    vsFrameDescriptor.height(),
-                    vsFrameDescriptor.fps(),
-                ))
-          } else {
-            Log.e(TAG, "Found Frame Type Descriptor without a prior format descriptor")
-          }
-        }
-        ::interfaceDescriptor.isInitialized && !::endpointDescriptor.isInitialized ->
-            if (descriptor.isEndpointDescriptorWithDirIN()) {
-              Log.i(TAG, "Found device interface endpoint")
-              endpointDescriptor = EndpointDescriptor(descriptor.buffer)
+        Log.i(TAG, "---- Supported video formats and frame sizes ----")
+        videoFormats.forEach { Log.i(TAG, it.toString()) }
+    }
+
+    private fun parseRawDescriptors(rawDescriptors: ByteArray): List<VideoFormat> {
+        Log.i(TAG, "Parsing usb descriptors of ${usbDevice.productName} for video streaming")
+        val formatsBuilder = mutableListOf<VideoFormat>()
+        var fourccFormat: String? = null
+        for (descriptor in UsbDescriptorParser(rawDescriptors).descriptors()) {
+            when {
+                !::iadDescriptor.isInitialized ->
+                    if (descriptor.isIADDescriptorWithVideoStreamingFunction()) {
+                        Log.i(TAG, "Found IAD descriptor with video streaming function")
+                        iadDescriptor = IADDescriptor(descriptor.buffer)
+                    }
+
+                !::interfaceDescriptor.isInitialized &&
+                        descriptor.isInterfaceDescriptorAtLeastOneEndpoint() &&
+                        descriptor.isInterfaceDescriptorWithVideoStreaming() -> {
+                    Log.i(TAG, "Found device interface with video streaming and endpoint > 0")
+                    interfaceDescriptor = InterfaceDescriptor(descriptor.buffer)
+                }
+
+                descriptor.isVSUncompressedFormatTypeDescriptor() -> {
+                    val uncompressedFormatDescriptor = VSUncompressedFormatDescriptor(descriptor.buffer)
+                    fourccFormat = uncompressedFormatDescriptor.fourccFormat
+                }
+
+                descriptor.isMJPEGVideoFormatDescriptor() -> {
+                    val mjpegFormatDescriptor = VSMjpegFormatDescriptor(descriptor.buffer)
+                    fourccFormat = mjpegFormatDescriptor.fourccFormat
+                }
+
+                descriptor.isVSFrameDescriptor() -> {
+                    if (fourccFormat != null) {
+                        val vsFrameDescriptor = VSFrameDescriptor(descriptor.buffer)
+                        formatsBuilder.add(
+                            VideoFormat(
+                                fourccFormat,
+                                vsFrameDescriptor.width(),
+                                vsFrameDescriptor.height(),
+                                vsFrameDescriptor.fps(),
+                            )
+                        )
+                    } else {
+                        Log.e(TAG, "Found Frame Type Descriptor without a prior format descriptor")
+                    }
+                }
+
+                ::interfaceDescriptor.isInitialized && !::endpointDescriptor.isInitialized ->
+                    if (descriptor.isEndpointDescriptorWithDirIN()) {
+                        Log.i(TAG, "Found device interface endpoint")
+                        endpointDescriptor = EndpointDescriptor(descriptor.buffer)
+                    }
+
+                ::iadDescriptor.isInitialized && descriptor.isIADDescriptor() -> {
+                    return formatsBuilder.toList()
+                }
             }
-        ::iadDescriptor.isInitialized && descriptor.isIADDescriptor() -> {
-          return formatsBuilder.toList()
         }
-      }
-    }
-    return formatsBuilder.toList()
-  }
-
-  override fun close() {
-    Log.e(TAG, "close: disconnectUsbAudioStreamingNative", )
-    EventLooper.post {
-      Log.d("VideoStreamingDescriptor", "stopUsbVideoStreamingNative")
-      UsbVideoNativeLibrary.stopUsbVideoStreamingNative()
-      UsbVideoNativeLibrary.disconnectUsbVideoStreamingNative()
-      Log.i("VideoStreamingDescriptor", "Closing video streaming descriptor")
-      usbDeviceConnection.close()
-    }
-  }
-
-  fun findBestVideoFormat(size: Size): VideoFormat? = findBestVideoFormat(size.width, size.height)
-
-  fun findBestVideoFormat(width: Int, height: Int): VideoFormat? {
-    if (videoFormats.isEmpty()) {
-      return null
+        return formatsBuilder.toList()
     }
 
-    return videoFormatFor(width, height).also {
-      Log.i(TAG, "Resolved video format for ${width}x${height} screen: $it")
-    }
-  }
-
-  private fun videoFormatFor(width: Int, height: Int): VideoFormat? {
-    // match size at 60fps
-    matchExactSize(width, height, 60)?.let {
-      return it
-    }
-
-    // match size at any fps
-    matchExactSize(width, height)?.let {
-      return it
-    }
-
-    // look for aspect ratio match
-    matchAspectRatio(width, height)?.let {
-      return it
-    }
-
-    // look for a closest aspect ratio size match
-    matchClosestAspectRatio(width, height)?.let {
-      return it
-    }
-
-    // look for a closest area size match
-    return matchClosetArea(width, height)
-  }
-
-  fun matchExactSize(width: Int, height: Int, fps: Int = 0): VideoFormat? {
-    return videoFormats.find {
-      SUPPORTED_VIDEO_FOURCC_FORMATS.contains(it.fourccFormat) &&
-          width == it.width &&
-          height == it.height &&
-          (fps == 0 || fps == it.fps)
-    }
-  }
-
-  fun matchAspectRatio(width: Int, height: Int): VideoFormat? {
-    val supportedFormats =
-        videoFormats.filter { SUPPORTED_VIDEO_FOURCC_FORMATS.contains(it.fourccFormat) }
-    val aspectRatio = aspectRatio(width, height)
-    val area = width * height
-    val byAspectRatio: Map<Pair<Int, Int>, List<VideoFormat>> =
-        supportedFormats.groupBy { it.aspectRatio }
-
-    return byAspectRatio.get(aspectRatio)?.let { formats: List<VideoFormat> ->
-      val (betterHalf, lesserHalf) = formats.partition { it.area >= area }
-      betterHalf.minByOrNull { it.area } ?: lesserHalf.maxBy { it.area }
-    }
-  }
-
-  fun matchClosestAspectRatio(width: Int, height: Int): VideoFormat? {
-    val supportedFormats =
-        videoFormats.filter {
-          SUPPORTED_VIDEO_FOURCC_FORMATS.contains(it.fourccFormat) &&
-              (it.width >= width || it.height >= height)
+    override fun close() {
+        Log.e(TAG, "close: disconnectUsbAudioStreamingNative")
+        EventLooper.post {
+            Log.d("VideoStreamingDescriptor", "stopUsbVideoStreamingNative")
+            UsbVideoNativeLibrary.stopUsbVideoStreamingNative()
+            UsbVideoNativeLibrary.disconnectUsbVideoStreamingNative()
+            Log.i("VideoStreamingDescriptor", "Closing video streaming descriptor")
+            usbDeviceConnection.close()
         }
-    val aspectRatio = width.toFloat() / height.toFloat()
-    val (smaller, bigger) = supportedFormats.partition { it.aspectRatioFloat > aspectRatio }
-    return bigger.minByOrNull { it.aspectRatioFloat } ?: smaller.maxByOrNull { it.aspectRatioFloat }
-  }
-
-  fun matchClosetArea(width: Int, height: Int): VideoFormat? {
-    val supportedFormats =
-        videoFormats.filter { SUPPORTED_VIDEO_FOURCC_FORMATS.contains(it.fourccFormat) }
-    val area = width * height
-    val (smallerHalf, biggerHalf) = supportedFormats.partition { it.area <= area }
-    return smallerHalf.maxByOrNull { it.area } ?: biggerHalf.minByOrNull { it.area }
-  }
-
-  fun matchExact(formatToMatch: String, width: Int, height: Int, fps: Int): VideoFormat? {
-    return videoFormats.find {
-      it.fourccFormat == formatToMatch && it.width == width && it.height == height && it.fps == fps
     }
-  }
 
-  fun matchFormat(formatToMatch: String): VideoFormat? {
-    return videoFormats.find { it.fourccFormat == formatToMatch }
-  }
+    fun findBestVideoFormat(size: Size): VideoFormat? = findBestVideoFormat(size.width, size.height)
+
+    fun findBestVideoFormat(width: Int, height: Int): VideoFormat? {
+        if (videoFormats.isEmpty()) {
+            return null
+        }
+
+        return videoFormatFor(width, height).also {
+            Log.i(TAG, "Resolved video format for ${width}x${height} screen: $it")
+        }
+    }
+
+    private fun videoFormatFor(width: Int, height: Int): VideoFormat? {
+        // match size at 60fps
+        matchExactSize(width, height, 60)?.let {
+            return it
+        }
+
+        // match size at any fps
+        matchExactSize(width, height)?.let {
+            return it
+        }
+
+        // look for aspect ratio match
+        matchAspectRatio(width, height)?.let {
+            return it
+        }
+
+        // look for a closest aspect ratio size match
+        matchClosestAspectRatio(width, height)?.let {
+            return it
+        }
+
+        // look for a closest area size match
+        return matchClosetArea(width, height)
+    }
+
+    fun matchExactSize(width: Int, height: Int, fps: Int = 0): VideoFormat? {
+        return videoFormats.find {
+            SUPPORTED_VIDEO_FOURCC_FORMATS.contains(it.fourccFormat) &&
+                    width == it.width &&
+                    height == it.height &&
+                    (fps == 0 || fps == it.fps)
+        }
+    }
+
+    fun matchAspectRatio(width: Int, height: Int): VideoFormat? {
+        val supportedFormats =
+            videoFormats.filter { SUPPORTED_VIDEO_FOURCC_FORMATS.contains(it.fourccFormat) }
+        val aspectRatio = aspectRatio(width, height)
+        val area = width * height
+        val byAspectRatio: Map<Pair<Int, Int>, List<VideoFormat>> =
+            supportedFormats.groupBy { it.aspectRatio }
+
+        return byAspectRatio.get(aspectRatio)?.let { formats: List<VideoFormat> ->
+            val (betterHalf, lesserHalf) = formats.partition { it.area >= area }
+            betterHalf.minByOrNull { it.area } ?: lesserHalf.maxBy { it.area }
+        }
+    }
+
+    fun matchClosestAspectRatio(width: Int, height: Int): VideoFormat? {
+        val supportedFormats =
+            videoFormats.filter {
+                SUPPORTED_VIDEO_FOURCC_FORMATS.contains(it.fourccFormat) &&
+                        (it.width >= width || it.height >= height)
+            }
+        val aspectRatio = width.toFloat() / height.toFloat()
+        val (smaller, bigger) = supportedFormats.partition { it.aspectRatioFloat > aspectRatio }
+        return bigger.minByOrNull { it.aspectRatioFloat } ?: smaller.maxByOrNull { it.aspectRatioFloat }
+    }
+
+    fun matchClosetArea(width: Int, height: Int): VideoFormat? {
+        val supportedFormats =
+            videoFormats.filter { SUPPORTED_VIDEO_FOURCC_FORMATS.contains(it.fourccFormat) }
+        val area = width * height
+        val (smallerHalf, biggerHalf) = supportedFormats.partition { it.area <= area }
+        return smallerHalf.maxByOrNull { it.area } ?: biggerHalf.minByOrNull { it.area }
+    }
+
+    fun matchExact(formatToMatch: String, width: Int, height: Int, fps: Int): VideoFormat? {
+        return videoFormats.find {
+            it.fourccFormat == formatToMatch && it.width == width && it.height == height && it.fps == fps
+        }
+    }
+
+    fun matchFormat(formatToMatch: String): VideoFormat? {
+        return videoFormats.find { it.fourccFormat == formatToMatch }
+    }
 }
 
 fun Descriptor.isIADDescriptorWithVideoStreamingFunction(): Boolean {
-  return bDescriptorType == USB_DT_IAD &&
-      buffer.getBInt(offset + 4) == USB_IAD_FUNCTION_CLASS_VIDEO &&
-      buffer.getBInt(offset + 5) == USB_IAD_FUNCTION_SUBCLASS_VIDEO
+    return bDescriptorType == USB_DT_IAD &&
+            buffer.getBInt(offset + 4) == USB_IAD_FUNCTION_CLASS_VIDEO &&
+            buffer.getBInt(offset + 5) == USB_IAD_FUNCTION_SUBCLASS_VIDEO
 }
 
 fun Descriptor.isIADDescriptor(): Boolean {
-  return bDescriptorType == USB_DT_IAD
+    return bDescriptorType == USB_DT_IAD
 }
 
 fun Descriptor.isInterfaceDescriptorWithVideoStreaming(): Boolean {
-  return bDescriptorType == USB_DT_DEVICE_INTERFACE &&
-      buffer.getBInt(offset + 5) == USB_CLASS_VIDEO &&
-      buffer.getBInt(offset + 6) == USB_SUBCLASS_VIDEO_STREAMING
+    return bDescriptorType == USB_DT_DEVICE_INTERFACE &&
+            buffer.getBInt(offset + 5) == USB_CLASS_VIDEO &&
+            buffer.getBInt(offset + 6) == USB_SUBCLASS_VIDEO_STREAMING
 }
 
 fun Descriptor.isVSUncompressedFormatTypeDescriptor(): Boolean {
-  return bDescriptorType == USB_DT_CLASSSPECIFIC_INTERFACE &&
-      buffer.getBInt(offset + 2) == UVC_VS_FORMAT_UNCOMPRESSED
+    return bDescriptorType == USB_DT_CLASSSPECIFIC_INTERFACE &&
+            buffer.getBInt(offset + 2) == UVC_VS_FORMAT_UNCOMPRESSED
 }
 
 fun Descriptor.isMJPEGVideoFormatDescriptor(): Boolean {
-  return bDescriptorType == USB_DT_CLASSSPECIFIC_INTERFACE &&
-      buffer.getBInt(offset + 2) == UVC_VS_FORMAT_MJPEG
+    return bDescriptorType == USB_DT_CLASSSPECIFIC_INTERFACE &&
+            buffer.getBInt(offset + 2) == UVC_VS_FORMAT_MJPEG
 }
 
 fun Descriptor.isVSFrameDescriptor(): Boolean {
-  return bDescriptorType == USB_DT_CLASSSPECIFIC_INTERFACE &&
-      buffer.getBInt(offset + 2) in intArrayOf(UVC_VS_FRAME_UNCOMPRESSED, UVC_VS_FRAME_MJPEG)
+    return bDescriptorType == USB_DT_CLASSSPECIFIC_INTERFACE &&
+            buffer.getBInt(offset + 2) in intArrayOf(UVC_VS_FRAME_UNCOMPRESSED, UVC_VS_FRAME_MJPEG)
 }
 
 fun Descriptor.isVideoStreamingEndpoint(): Boolean {
-  return bDescriptorType == USB_DT_CLASSSPECIFIC_INTERFACE &&
-      buffer.getBInt(offset + 2) == UVC_VS_FORMAT_UNCOMPRESSED
+    return bDescriptorType == USB_DT_CLASSSPECIFIC_INTERFACE &&
+            buffer.getBInt(offset + 2) == UVC_VS_FORMAT_UNCOMPRESSED
 }
 
 data class VideoFormat(
@@ -268,22 +275,22 @@ data class VideoFormat(
     val height: Int,
     val fps: Int,
 ) {
-  override fun toString(): String = "$fourccFormat ${width}x$height @$fps"
+    override fun toString(): String = "$fourccFormat ${width}x$height @$fps"
 
-  fun label(): String = "$fourccFormat ${width}x$height @$fps"
+    fun label(): String = "$fourccFormat ${width}x$height @$fps"
 
-  val aspectRatio: Pair<Int, Int> = aspectRatio(width, height)
-  val aspectRatioFloat: Float = width.toFloat() / height.toFloat()
-  val area: Int = width * height
+    val aspectRatio: Pair<Int, Int> = aspectRatio(width, height)
+    val aspectRatioFloat: Float = width.toFloat() / height.toFloat()
+    val area: Int = width * height
 
-  fun toLibuvcFrameFormat(): LibuvcFrameFormat {
-    return when (fourccFormat) {
-      "YUY2" -> LibuvcFrameFormat.UVC_FRAME_FORMAT_YUYV
-      "MJPG" -> LibuvcFrameFormat.UVC_FRAME_FORMAT_MJPEG
-      "NV12" -> LibuvcFrameFormat.UVC_FRAME_FORMAT_NV12
-      else -> throw IllegalArgumentException("Unsupported fourcc format $fourccFormat")
+    fun toLibuvcFrameFormat(): LibuvcFrameFormat {
+        return when (fourccFormat) {
+            "YUY2" -> LibuvcFrameFormat.UVC_FRAME_FORMAT_YUYV
+            "MJPG" -> LibuvcFrameFormat.UVC_FRAME_FORMAT_MJPEG
+            "NV12" -> LibuvcFrameFormat.UVC_FRAME_FORMAT_NV12
+            else -> throw IllegalArgumentException("Unsupported fourcc format $fourccFormat")
+        }
     }
-  }
 }
 
 /**
@@ -312,25 +319,25 @@ data class VideoFormat(
  * </pre>
  */
 class VSUncompressedFormatDescriptor(pack: ByteBuffer) {
-  val bLength: Int = pack.getBInt()
-  val bDescriptorType: Int = pack.getBInt()
-  val bDescriptorSubtype: Int = pack.getBInt()
-  val bFormatIndex: Int = pack.getBInt()
-  val bNumFrameDescriptors: Int = pack.getBInt()
+    val bLength: Int = pack.getBInt()
+    val bDescriptorType: Int = pack.getBInt()
+    val bDescriptorSubtype: Int = pack.getBInt()
+    val bFormatIndex: Int = pack.getBInt()
+    val bNumFrameDescriptors: Int = pack.getBInt()
 
-  // the descriptor contains 16 bytes guidFormat but we only read first 4 bytes which is
-  // fourccFormat and skip 12
-  val fourccFormat: String =
-      String(byteArrayOf(pack.get(), pack.get(), pack.get(), pack.get())).also {
-        pack.position(pack.position() + 12)
-      }
+    // the descriptor contains 16 bytes guidFormat but we only read first 4 bytes which is
+    // fourccFormat and skip 12
+    val fourccFormat: String =
+        String(byteArrayOf(pack.get(), pack.get(), pack.get(), pack.get())).also {
+            pack.position(pack.position() + 12)
+        }
 
-  val bBitsPerPixel: Int = pack.getBInt()
-  val bDefaultFrameIndex: Int = pack.getBInt()
-  val bAspectRatioX: Int = pack.getBInt()
-  val bAspectRatioY: Int = pack.getBInt()
-  val bmInterlaceFlags: Int = pack.getBInt()
-  val bCopyProtect: Int = pack.getBInt()
+    val bBitsPerPixel: Int = pack.getBInt()
+    val bDefaultFrameIndex: Int = pack.getBInt()
+    val bAspectRatioX: Int = pack.getBInt()
+    val bAspectRatioY: Int = pack.getBInt()
+    val bmInterlaceFlags: Int = pack.getBInt()
+    val bCopyProtect: Int = pack.getBInt()
 }
 
 /**
@@ -358,19 +365,19 @@ class VSUncompressedFormatDescriptor(pack: ByteBuffer) {
  * </pre
  */
 class VSMjpegFormatDescriptor(pack: ByteBuffer) {
-  val bLength: Int = pack.getBInt()
-  val bDescriptorType: Int = pack.getBInt()
-  val bDescriptorSubtype: Int = pack.getBInt()
-  val bFormatIndex: Int = pack.getBInt()
-  val bNumFrameDescriptors: Int = pack.getBInt()
-  val bmFlags: Int = pack.getBInt()
-  val bDefaultFrameIndex: Int = pack.getBInt()
-  val bAspectRatioX: Int = pack.getBInt()
-  val bAspectRatioY: Int = pack.getBInt()
-  val bmInterlaceFlags: Int = pack.getBInt()
-  val bCopyProtect: Int = pack.getBInt()
+    val bLength: Int = pack.getBInt()
+    val bDescriptorType: Int = pack.getBInt()
+    val bDescriptorSubtype: Int = pack.getBInt()
+    val bFormatIndex: Int = pack.getBInt()
+    val bNumFrameDescriptors: Int = pack.getBInt()
+    val bmFlags: Int = pack.getBInt()
+    val bDefaultFrameIndex: Int = pack.getBInt()
+    val bAspectRatioX: Int = pack.getBInt()
+    val bAspectRatioY: Int = pack.getBInt()
+    val bmInterlaceFlags: Int = pack.getBInt()
+    val bCopyProtect: Int = pack.getBInt()
 
-  val fourccFormat: String = "MJPG"
+    val fourccFormat: String = "MJPG"
 }
 
 /**
@@ -397,74 +404,74 @@ class VSMjpegFormatDescriptor(pack: ByteBuffer) {
  * </pre>
  */
 class VSFrameDescriptor(pack: ByteBuffer) {
-  val bLength: Int = pack.getBInt()
-  val bDescriptorType: Int = pack.getBInt()
-  val bDescriptorSubtype: Int = pack.getBInt()
-  val bFrameIndex: Int = pack.getBInt()
-  val bmCapabilities: Int = pack.getBInt()
-  val wWidth: Int = pack.getWInt()
-  val wHeight: Int = pack.getWInt()
-  val dwMinBitRate: Int = pack.getInt()
-  val dwMaxBitRate: Int = pack.getInt()
-  val dwMaxVideoFrameBufferSize: Int = pack.getInt()
-  val dwDefaultFrameInterval: Int = pack.getInt()
-  val bFrameIntervalType: Int = pack.getBInt()
+    val bLength: Int = pack.getBInt()
+    val bDescriptorType: Int = pack.getBInt()
+    val bDescriptorSubtype: Int = pack.getBInt()
+    val bFrameIndex: Int = pack.getBInt()
+    val bmCapabilities: Int = pack.getBInt()
+    val wWidth: Int = pack.getWInt()
+    val wHeight: Int = pack.getWInt()
+    val dwMinBitRate: Int = pack.getInt()
+    val dwMaxBitRate: Int = pack.getInt()
+    val dwMaxVideoFrameBufferSize: Int = pack.getInt()
+    val dwDefaultFrameInterval: Int = pack.getInt()
+    val bFrameIntervalType: Int = pack.getBInt()
 
-  fun width(): Int = wWidth
+    fun width(): Int = wWidth
 
-  fun height(): Int = wHeight
+    fun height(): Int = wHeight
 
-  fun fps(): Int = 10_000_000 / dwDefaultFrameInterval
+    fun fps(): Int = 10_000_000 / dwDefaultFrameInterval
 
-  fun isExactMatch(width: Int, height: Int, fps: Int): Boolean {
-    return width == width() && height == height() && fps == fps()
-  }
+    fun isExactMatch(width: Int, height: Int, fps: Int): Boolean {
+        return width == width() && height == height() && fps == fps()
+    }
 
-  fun isMinimumSizeAndFpsMatch(width: Int, height: Int, fps: Int): Boolean {
-    return width <= width() && height <= height() && fps <= fps()
-  }
+    fun isMinimumSizeAndFpsMatch(width: Int, height: Int, fps: Int): Boolean {
+        return width <= width() && height <= height() && fps <= fps()
+    }
 }
 
 /** Must be kept in-sync with https://fburl.com/code/kzplsk2y. */
 enum class LibuvcFrameFormat {
-  /** Any supported format */
-  UVC_FRAME_FORMAT_ANY,
-  UVC_FRAME_FORMAT_UNCOMPRESSED,
-  UVC_FRAME_FORMAT_COMPRESSED,
+    /** Any supported format */
+    UVC_FRAME_FORMAT_ANY,
+    UVC_FRAME_FORMAT_UNCOMPRESSED,
+    UVC_FRAME_FORMAT_COMPRESSED,
 
-  /**
-   * YUYV/YUV2/YUV422: YUV encoding with one luminance value per pixel and one UV (chrominance) pair
-   * for every two pixels.
-   */
-  UVC_FRAME_FORMAT_YUYV,
-  UVC_FRAME_FORMAT_UYVY,
+    /**
+     * YUYV/YUV2/YUV422: YUV encoding with one luminance value per pixel and one UV (chrominance) pair
+     * for every two pixels.
+     */
+    UVC_FRAME_FORMAT_YUYV,
+    UVC_FRAME_FORMAT_UYVY,
 
-  /** 24-bit RGB */
-  UVC_FRAME_FORMAT_RGB,
-  UVC_FRAME_FORMAT_BGR,
+    /** 24-bit RGB */
+    UVC_FRAME_FORMAT_RGB,
+    UVC_FRAME_FORMAT_BGR,
 
-  /** Motion-JPEG (or JPEG) encoded images */
-  UVC_FRAME_FORMAT_MJPEG,
-  UVC_FRAME_FORMAT_H264,
+    /** Motion-JPEG (or JPEG) encoded images */
+    UVC_FRAME_FORMAT_MJPEG,
+    UVC_FRAME_FORMAT_H264,
 
-  /** Greyscale images */
-  UVC_FRAME_FORMAT_GRAY8,
-  UVC_FRAME_FORMAT_GRAY16,
+    /** Greyscale images */
+    UVC_FRAME_FORMAT_GRAY8,
+    UVC_FRAME_FORMAT_GRAY16,
 
-  /* Raw colour mosaic images */
-  UVC_FRAME_FORMAT_BY8,
-  UVC_FRAME_FORMAT_BA81,
-  UVC_FRAME_FORMAT_SGRBG8,
-  UVC_FRAME_FORMAT_SGBRG8,
-  UVC_FRAME_FORMAT_SRGGB8,
-  UVC_FRAME_FORMAT_SBGGR8,
+    /* Raw colour mosaic images */
+    UVC_FRAME_FORMAT_BY8,
+    UVC_FRAME_FORMAT_BA81,
+    UVC_FRAME_FORMAT_SGRBG8,
+    UVC_FRAME_FORMAT_SGBRG8,
+    UVC_FRAME_FORMAT_SRGGB8,
+    UVC_FRAME_FORMAT_SBGGR8,
 
-  /** YUV420: NV12 */
-  UVC_FRAME_FORMAT_NV12,
+    /** YUV420: NV12 */
+    UVC_FRAME_FORMAT_NV12,
 
-  /** YUV: P010 */
-  UVC_FRAME_FORMAT_P010,
+    /** YUV: P010 */
+    UVC_FRAME_FORMAT_P010,
 
-  /** Number of formats understood */
-  UVC_FRAME_FORMAT_COUNT,
+    /** Number of formats understood */
+    UVC_FRAME_FORMAT_COUNT,
 }

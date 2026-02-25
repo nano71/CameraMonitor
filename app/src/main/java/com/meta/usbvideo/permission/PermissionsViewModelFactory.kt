@@ -23,12 +23,12 @@ class PermissionsViewModelFactory(
     private val cameraPermission: CameraPermissionState,
     private val recordAudioPermission: RecordAudioPermissionState,
 ) : ViewModelProvider.Factory {
-  @Suppress("UNCHECKED_CAST", "KotlinGenericsCast")
-  override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
-    return PermissionsViewModel(
-        cameraPermission,
-        recordAudioPermission,
-    )
-        as T
-  }
+    @Suppress("UNCHECKED_CAST", "KotlinGenericsCast")
+    override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+        return PermissionsViewModel(
+            cameraPermission,
+            recordAudioPermission,
+        )
+                as T
+    }
 }

@@ -42,107 +42,112 @@ class AudioStreamingConnection(
     private val usbDevice: UsbDevice,
     private val usbDeviceConnection: UsbDeviceConnection,
 ) : Closeable {
-  val deviceFD: Int = usbDeviceConnection.fileDescriptor
+    val deviceFD: Int = usbDeviceConnection.fileDescriptor
 
-  lateinit var interfaceDescriptor: InterfaceDescriptor
-  lateinit var generalDescriptor: AudioStreamingGeneralDescriptor
-  lateinit var formatTypeDescriptor: AudioStreamingFormatTypeDescriptor
-  lateinit var endpointDescriptor: EndpointDescriptor
+    lateinit var interfaceDescriptor: InterfaceDescriptor
+    lateinit var generalDescriptor: AudioStreamingGeneralDescriptor
+    lateinit var formatTypeDescriptor: AudioStreamingFormatTypeDescriptor
+    lateinit var endpointDescriptor: EndpointDescriptor
 
-  init {
-    Log.i(TAG, "Parsing usb descriptors of ${usbDevice.productName} for audio streaming")
-    @Suppress("CatchGeneralException")
-    try {
-      if (parseRawDescriptors(usbDeviceConnection.rawDescriptors)) {
-        Log.i(
-            TAG,
-            """
+    init {
+        Log.i(TAG, "Parsing usb descriptors of ${usbDevice.productName} for audio streaming")
+        @Suppress("CatchGeneralException")
+        try {
+            if (parseRawDescriptors(usbDeviceConnection.rawDescriptors)) {
+                Log.i(
+                    TAG,
+                    """
             wFormatTag ${generalDescriptor.wFormatTag} 
             bNrChannels: ${formatTypeDescriptor.bNrChannels} 
             bSubFrameSize: ${formatTypeDescriptor.bSubFrameSize} 
             bBitResolution: ${formatTypeDescriptor.bBitResolution} 
             tSamFreq: ${formatTypeDescriptor.tSamFreq.joinToString(", ")} 
           """
-                .trimIndent())
-      }
-    } catch (e: Exception) {
-      Log.e(TAG, "Error in parsing USB descriptors for audio streaming", e)
+                        .trimIndent()
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in parsing USB descriptors for audio streaming", e)
+        }
     }
-  }
 
-  val supportsAudioStreaming: Boolean = ::endpointDescriptor.isInitialized
+    val supportsAudioStreaming: Boolean = ::endpointDescriptor.isInitialized
 
-  val hasSupportedAudioFormat: Boolean =
-      ::generalDescriptor.isInitialized && generalDescriptor.isSupportedFormat()
+    val hasSupportedAudioFormat: Boolean =
+        ::generalDescriptor.isInitialized && generalDescriptor.isSupportedFormat()
 
-  val hasFormatTypeDescriptor: Boolean = ::formatTypeDescriptor.isInitialized
+    val hasFormatTypeDescriptor: Boolean = ::formatTypeDescriptor.isInitialized
 
-  val hasInterfaceDescriptor: Boolean = ::interfaceDescriptor.isInitialized
+    val hasInterfaceDescriptor: Boolean = ::interfaceDescriptor.isInitialized
 
-  val supportedAudioFormat: Int? =
-      if (::generalDescriptor.isInitialized && generalDescriptor.isSupportedFormat()) {
-        generalDescriptor.toAudioFormat()
-      } else {
-        null
-      }
+    val supportedAudioFormat: Int? =
+        if (::generalDescriptor.isInitialized && generalDescriptor.isSupportedFormat()) {
+            generalDescriptor.toAudioFormat()
+        } else {
+            null
+        }
 
-  private fun parseRawDescriptors(rawDescriptors: ByteArray): Boolean {
-    for (descriptor in UsbDescriptorParser(rawDescriptors).descriptors()) {
-      when {
-        !::interfaceDescriptor.isInitialized ->
-            if (descriptor.isInterfaceDescriptorAtLeastOneEndpoint() &&
-                descriptor.isInterfaceDescriptorWithAudioStreaming()) {
-              Log.i(TAG, "Found device interface with audio streaming and endpoint > 0")
-              interfaceDescriptor = InterfaceDescriptor(descriptor.buffer)
+    private fun parseRawDescriptors(rawDescriptors: ByteArray): Boolean {
+        for (descriptor in UsbDescriptorParser(rawDescriptors).descriptors()) {
+            when {
+                !::interfaceDescriptor.isInitialized ->
+                    if (descriptor.isInterfaceDescriptorAtLeastOneEndpoint() &&
+                        descriptor.isInterfaceDescriptorWithAudioStreaming()
+                    ) {
+                        Log.i(TAG, "Found device interface with audio streaming and endpoint > 0")
+                        interfaceDescriptor = InterfaceDescriptor(descriptor.buffer)
+                    }
+
+                !::generalDescriptor.isInitialized ->
+                    if (descriptor.isAudioStreamingInterfaceDescriptor()) {
+                        Log.i(TAG, "Found Audio streaming general interface AS_GENERAL")
+                        generalDescriptor = AudioStreamingGeneralDescriptor(descriptor.buffer)
+                    }
+
+                !::formatTypeDescriptor.isInitialized ->
+                    if (descriptor.isAudioStreamingFormatTypeDescriptor()) {
+                        Log.i(TAG, "Found Audio streaming format interface AS_FORMAT")
+                        formatTypeDescriptor = AudioStreamingFormatTypeDescriptor(descriptor.buffer)
+                    }
+
+                !::endpointDescriptor.isInitialized ->
+                    if (descriptor.isEndpointDescriptorWithDirIN()) {
+                        Log.i(TAG, "Found device interface endpoint")
+                        endpointDescriptor = EndpointDescriptor(descriptor.buffer)
+                        return true
+                    }
             }
-        !::generalDescriptor.isInitialized ->
-            if (descriptor.isAudioStreamingInterfaceDescriptor()) {
-              Log.i(TAG, "Found Audio streaming general interface AS_GENERAL")
-              generalDescriptor = AudioStreamingGeneralDescriptor(descriptor.buffer)
-            }
-        !::formatTypeDescriptor.isInitialized ->
-            if (descriptor.isAudioStreamingFormatTypeDescriptor()) {
-              Log.i(TAG, "Found Audio streaming format interface AS_FORMAT")
-              formatTypeDescriptor = AudioStreamingFormatTypeDescriptor(descriptor.buffer)
-            }
-        !::endpointDescriptor.isInitialized ->
-            if (descriptor.isEndpointDescriptorWithDirIN()) {
-              Log.i(TAG, "Found device interface endpoint")
-              endpointDescriptor = EndpointDescriptor(descriptor.buffer)
-              return true
-            }
-      }
+        }
+        return false
     }
-    return false
-  }
 
-  override fun close() {
-    Log.e(TAG, "close: disconnectUsbAudioStreamingNative", )
-    EventLooper.post { UsbVideoNativeLibrary.disconnectUsbAudioStreamingNative() }
-    usbDeviceConnection.close()
-  }
+    override fun close() {
+        Log.e(TAG, "close: disconnectUsbAudioStreamingNative")
+        EventLooper.post { UsbVideoNativeLibrary.disconnectUsbAudioStreamingNative() }
+        usbDeviceConnection.close()
+    }
 }
 
 fun Descriptor.isIADDescriptorWithAudioStreamingFunction(): Boolean {
-  return bDescriptorType == USB_DT_IAD &&
-      buffer.getBInt(offset + 4) == USB_CLASS_AUDIO &&
-      buffer.getBInt(offset + 5) == USB_SUBCLASS_AUDIO_STREAMING
+    return bDescriptorType == USB_DT_IAD &&
+            buffer.getBInt(offset + 4) == USB_CLASS_AUDIO &&
+            buffer.getBInt(offset + 5) == USB_SUBCLASS_AUDIO_STREAMING
 }
 
 fun Descriptor.isInterfaceDescriptorWithAudioStreaming(): Boolean {
-  return bDescriptorType == USB_DT_DEVICE_INTERFACE &&
-      buffer.getBInt(offset + 5) == USB_CLASS_AUDIO &&
-      buffer.getBInt(offset + 6) == USB_SUBCLASS_AUDIO_STREAMING
+    return bDescriptorType == USB_DT_DEVICE_INTERFACE &&
+            buffer.getBInt(offset + 5) == USB_CLASS_AUDIO &&
+            buffer.getBInt(offset + 6) == USB_SUBCLASS_AUDIO_STREAMING
 }
 
 fun Descriptor.isAudioStreamingInterfaceDescriptor(): Boolean {
-  return bDescriptorType == USB_DT_CLASSSPECIFIC_INTERFACE &&
-      buffer.getBInt(offset + 2) == UAC_AS_GENERAL // AS_GENERAL
+    return bDescriptorType == USB_DT_CLASSSPECIFIC_INTERFACE &&
+            buffer.getBInt(offset + 2) == UAC_AS_GENERAL // AS_GENERAL
 }
 
 fun Descriptor.isAudioStreamingFormatTypeDescriptor(): Boolean {
-  return bDescriptorType == USB_DT_CLASSSPECIFIC_INTERFACE &&
-      buffer.getBInt(offset + 2) == UAC_AS_FORMAT // Format Type
+    return bDescriptorType == USB_DT_CLASSSPECIFIC_INTERFACE &&
+            buffer.getBInt(offset + 2) == UAC_AS_FORMAT // Format Type
 }
 
 /**
@@ -159,22 +164,22 @@ fun Descriptor.isAudioStreamingFormatTypeDescriptor(): Boolean {
  * </pre>
  */
 class AudioStreamingGeneralDescriptor(pack: ByteBuffer) {
-  val bLength: Int = pack.getBInt()
-  val bDescriptorType: Int = pack.getBInt()
-  val bDescriptorSubtype: Int = pack.getBInt()
-  val bTerminalLink: Int = pack.getBInt()
-  val bDelay: Int = pack.getBInt()
-  val wFormatTag: Int = pack.getWInt()
+    val bLength: Int = pack.getBInt()
+    val bDescriptorType: Int = pack.getBInt()
+    val bDescriptorSubtype: Int = pack.getBInt()
+    val bTerminalLink: Int = pack.getBInt()
+    val bDelay: Int = pack.getBInt()
+    val wFormatTag: Int = pack.getWInt()
 
-  fun isSupportedFormat(): Boolean =
-      (wFormatTag == UAC_FORMAT_TYPE_I_PCM || wFormatTag == UAC_FORMAT_TYPE_I_IEEE_FLOAT)
+    fun isSupportedFormat(): Boolean =
+        (wFormatTag == UAC_FORMAT_TYPE_I_PCM || wFormatTag == UAC_FORMAT_TYPE_I_IEEE_FLOAT)
 
-  fun toAudioFormat(): Int =
-      when (wFormatTag) {
-        UAC_FORMAT_TYPE_I_PCM -> AudioFormat.ENCODING_PCM_16BIT
-        UAC_FORMAT_TYPE_I_IEEE_FLOAT -> AudioFormat.ENCODING_PCM_FLOAT
-        else -> error("Unsupported audio format $wFormatTag")
-      }
+    fun toAudioFormat(): Int =
+        when (wFormatTag) {
+            UAC_FORMAT_TYPE_I_PCM -> AudioFormat.ENCODING_PCM_16BIT
+            UAC_FORMAT_TYPE_I_IEEE_FLOAT -> AudioFormat.ENCODING_PCM_FLOAT
+            else -> error("Unsupported audio format $wFormatTag")
+        }
 }
 
 /**
@@ -194,18 +199,18 @@ class AudioStreamingGeneralDescriptor(pack: ByteBuffer) {
  * </pre>
  */
 class AudioStreamingFormatTypeDescriptor(pack: ByteBuffer) {
-  val bLength: Int = pack.getBInt()
-  val bDescriptorType: Int = pack.getBInt()
-  val bDescriptorSubtype: Int = pack.getBInt()
-  val bFormatType: Int = pack.getBInt()
-  val bNrChannels: Int = pack.getBInt()
-  val bSubFrameSize: Int = pack.getBInt() // bytes per audio subFrame
-  val bBitResolution: Int = pack.getBInt() // bits per sample
-  val bSamFreqType: Int = pack.getBInt()
-  val tSamFreq: IntArray =
-      if (bSamFreqType == 0) {
-        intArrayOf(pack.getTInt(), pack.getTInt())
-      } else {
-        IntArray(bSamFreqType) { pack.getTInt() }
-      }
+    val bLength: Int = pack.getBInt()
+    val bDescriptorType: Int = pack.getBInt()
+    val bDescriptorSubtype: Int = pack.getBInt()
+    val bFormatType: Int = pack.getBInt()
+    val bNrChannels: Int = pack.getBInt()
+    val bSubFrameSize: Int = pack.getBInt() // bytes per audio subFrame
+    val bBitResolution: Int = pack.getBInt() // bits per sample
+    val bSamFreqType: Int = pack.getBInt()
+    val tSamFreq: IntArray =
+        if (bSamFreqType == 0) {
+            intArrayOf(pack.getTInt(), pack.getTInt())
+        } else {
+            IntArray(bSamFreqType) { pack.getTInt() }
+        }
 }

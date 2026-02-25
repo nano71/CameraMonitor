@@ -23,50 +23,51 @@ import android.hardware.usb.UsbDevice
  * video and audio from the device.
  */
 sealed interface UsbDeviceState {
-  object NotFound : UsbDeviceState
+    object NotFound : UsbDeviceState
 
-  class Attached(val usbDevice: UsbDevice) : UsbDeviceState
+    class Attached(val usbDevice: UsbDevice) : UsbDeviceState
 
-  class Detached(val usbDevice: UsbDevice) : UsbDeviceState
+    class Detached(val usbDevice: UsbDevice) : UsbDeviceState
 
-  class PermissionRequired(val usbDevice: UsbDevice) : UsbDeviceState
+    class PermissionRequired(val usbDevice: UsbDevice) : UsbDeviceState
 
-  class PermissionRequested(val usbDevice: UsbDevice) : UsbDeviceState
+    class PermissionRequested(val usbDevice: UsbDevice) : UsbDeviceState
 
-  class PermissionGranted(val usbDevice: UsbDevice) : UsbDeviceState
+    class PermissionGranted(val usbDevice: UsbDevice) : UsbDeviceState
 
-  class PermissionDenied(val usbDevice: UsbDevice) : UsbDeviceState
+    class PermissionDenied(val usbDevice: UsbDevice) : UsbDeviceState
 
-  class Connected(
-      val usbDevice: UsbDevice,
-      val audioStreamingConnection: AudioStreamingConnection,
-      val videoStreamingConnection: VideoStreamingConnection,
-  ) : UsbDeviceState
+    class Connected(
+        val usbDevice: UsbDevice,
+        val audioStreamingConnection: AudioStreamingConnection,
+        val videoStreamingConnection: VideoStreamingConnection,
+    ) : UsbDeviceState
 
-  class Streaming(
-      val usbDevice: UsbDevice,
-      val audioStreamingConnection: AudioStreamingConnection,
-      val audioStreamingSuccess: Boolean,
-      val audioStreamingMessage: String,
-      val videoStreamingConnection: VideoStreamingConnection,
-      val videoStreamingSuccess: Boolean,
-      val videoStreamingMessage: String,
-  ) : UsbDeviceState
+    class Streaming(
+        val usbDevice: UsbDevice,
+        val audioStreamingConnection: AudioStreamingConnection,
+        val audioStreamingSuccess: Boolean,
+        val audioStreamingMessage: String,
+        val videoStreamingConnection: VideoStreamingConnection,
+        val videoStreamingSuccess: Boolean,
+        val videoStreamingMessage: String,
+    ) : UsbDeviceState
 
-  class StreamingRestart(
-    val usbDevice: UsbDevice,
-    val audioStreamingConnection: AudioStreamingConnection,
-    val videoStreamingConnection: VideoStreamingConnection,
-  ) : UsbDeviceState
+    class StreamingRestart(
+        val usbDevice: UsbDevice,
+        val audioStreamingConnection: AudioStreamingConnection,
+        val videoStreamingConnection: VideoStreamingConnection,
+    ) : UsbDeviceState
 
-  class StreamingStop(
-    val usbDevice: UsbDevice,
-    val audioStreamingConnection: AudioStreamingConnection,
-    val videoStreamingConnection: VideoStreamingConnection,
-  ) : UsbDeviceState
-  class StreamingStopped(
-      val usbDevice: UsbDevice,
-      val audioStreamingConnection: AudioStreamingConnection,
-      val videoStreamingConnection: VideoStreamingConnection,
-  ) : UsbDeviceState
+    class StreamingStop(
+        val usbDevice: UsbDevice,
+        val audioStreamingConnection: AudioStreamingConnection,
+        val videoStreamingConnection: VideoStreamingConnection,
+    ) : UsbDeviceState
+
+    class StreamingStopped(
+        val usbDevice: UsbDevice,
+        val audioStreamingConnection: AudioStreamingConnection,
+        val videoStreamingConnection: VideoStreamingConnection,
+    ) : UsbDeviceState
 }

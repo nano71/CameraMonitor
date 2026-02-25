@@ -25,14 +25,14 @@ class StreamerViewModelFactory(
     private val cameraPermission: CameraPermissionState,
     private val recordAudioPermission: RecordAudioPermissionState,
 ) : ViewModelProvider.Factory {
-  @Suppress("UNCHECKED_CAST", "KotlinGenericsCast")
-  override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+    @Suppress("UNCHECKED_CAST", "KotlinGenericsCast")
+    override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
 
-    return StreamerViewModel(
-        requireNotNull(extras[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY]),
-        cameraPermission,
-        recordAudioPermission,
-    )
-        as T
-  }
+        return StreamerViewModel(
+            requireNotNull(extras[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY]),
+            cameraPermission,
+            recordAudioPermission,
+        )
+                as T
+    }
 }
