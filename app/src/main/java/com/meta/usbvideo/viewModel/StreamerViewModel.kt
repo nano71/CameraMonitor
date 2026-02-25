@@ -15,7 +15,6 @@
  */
 package com.meta.usbvideo.viewModel
 
-import android.Manifest
 import android.app.Application
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
@@ -31,8 +30,6 @@ import android.os.SystemClock
 import android.util.Log
 import android.view.Surface
 import androidx.activity.ComponentActivity
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.IntentCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.Lifecycle
@@ -43,15 +40,6 @@ import com.meta.usbvideo.UsbSpeed
 import com.meta.usbvideo.UsbVideoNativeLibrary
 import com.meta.usbvideo.connection.VideoFormat
 import com.meta.usbvideo.eventloop.EventLooper
-import com.meta.usbvideo.permission.CameraPermissionRequested
-import com.meta.usbvideo.permission.CameraPermissionRequired
-import com.meta.usbvideo.permission.CameraPermissionState
-import com.meta.usbvideo.permission.RecordAudioPermissionRequested
-import com.meta.usbvideo.permission.RecordAudioPermissionRequired
-import com.meta.usbvideo.permission.RecordAudioPermissionState
-import com.meta.usbvideo.permission.getPermissionStatus
-import com.meta.usbvideo.permission.toCameraState
-import com.meta.usbvideo.permission.toRecordAudioState
 import com.meta.usbvideo.usb.UsbDeviceState
 import com.meta.usbvideo.usb.UsbMonitor
 import com.meta.usbvideo.usb.UsbMonitor.findUvcDevice
@@ -61,8 +49,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -72,10 +58,6 @@ import kotlinx.coroutines.flow.stateIn
 sealed interface UiAction
 
 object Initialize : UiAction
-
-object RequestCameraPermission : UiAction
-
-object RequestRecordAudioPermission : UiAction
 
 object RequestUsbPermission : UiAction
 
@@ -88,12 +70,7 @@ private const val ACTION_USB_PERMISSION: String = "com.meta.usbvideo.USB_PERMISS
 /** Reactively monitors the state of USB AVC device and implements state transitions methods */
 class StreamerViewModel(
     private val application: Application,
-    cameraPermission: CameraPermissionState,
-    recordAudioPermission: RecordAudioPermissionState,
 ) : AndroidViewModel(application) {
-
-    private lateinit var cameraPermissionLauncher: ActivityResultLauncher<String>
-    private lateinit var recordAudioPermissionLauncher: ActivityResultLauncher<String>
 
     var videoFormat: VideoFormat? = null
     var videoFormats: List<VideoFormat> = emptyList()
@@ -127,28 +104,6 @@ class StreamerViewModel(
         }
     }
 
-    fun prepareCameraPermissionLaunchers(activity: ComponentActivity) {
-        cameraPermissionLauncher =
-            activity.registerForActivityResult(ActivityResultContracts.RequestPermission()) {
-                updateCameraPermissionState(
-                    activity.getPermissionStatus(Manifest.permission.CAMERA).toCameraState()
-                )
-            }
-        recordAudioPermissionLauncher =
-            activity.registerForActivityResult(ActivityResultContracts.RequestPermission()) {
-                updateRecordAudioPermissionState(
-                    activity.getPermissionStatus(Manifest.permission.RECORD_AUDIO).toRecordAudioState()
-                )
-            }
-        activity.lifecycle.addObserver(
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_DESTROY) {
-                    recordAudioPermissionLauncher.unregister()
-                    cameraPermissionLauncher.unregister()
-                }
-            })
-    }
-
     fun prepareUsbBroadcastReceivers(activity: ComponentActivity) {
         activity.registerReceiver(usbReceiver, IntentFilter(UsbManager.ACTION_USB_DEVICE_ATTACHED))
         activity.registerReceiver(usbReceiver, IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED))
@@ -164,16 +119,6 @@ class StreamerViewModel(
                 }
             })
     }
-
-    private val cameraPermissionInternalState: MutableStateFlow<CameraPermissionState> =
-        MutableStateFlow(cameraPermission)
-    val cameraPermissionStateFlow: StateFlow<CameraPermissionState> =
-        cameraPermissionInternalState.asStateFlow()
-
-    private val recordAudioPermissionInternalState: MutableStateFlow<RecordAudioPermissionState> =
-        MutableStateFlow(recordAudioPermission)
-    val recordAudioPermissionStateFlow: StateFlow<RecordAudioPermissionState> =
-        recordAudioPermissionInternalState.asStateFlow()
 
     private val videoSurfaceStateFlow = MutableStateFlow<Surface?>(null)
 
@@ -193,29 +138,10 @@ class StreamerViewModel(
 
     fun uiActionFlow(): Flow<UiAction> {
         return combineTransform(
-            cameraPermissionStateFlow,
-            recordAudioPermissionStateFlow,
             UsbMonitor.usbDeviceStateFlow,
-        ) { cameraPermissionState: CameraPermissionState,
-            recordAudioPermissionState: RecordAudioPermissionState,
-            usbDeviceState: UsbDeviceState ->
+        ) { usbDeviceState: UsbDeviceState ->
 //            Log.i(TAG, "$cameraPermissionState, $recordAudioPermissionState $usbDeviceState")
             when {
-                cameraPermissionState is CameraPermissionRequired -> {
-                    emit(RequestCameraPermission)
-                }
-
-                cameraPermissionState is CameraPermissionRequested -> {
-                    Log.i(TAG, "CameraPermissionRequested. No op")
-                }
-
-                recordAudioPermissionState is RecordAudioPermissionRequired -> {
-                    emit(RequestRecordAudioPermission)
-                }
-
-                recordAudioPermissionState is RecordAudioPermissionRequested -> {
-                    Log.i(TAG, "RecordAudioPermissionRequested. No op")
-                }
 
                 usbDeviceState is UsbDeviceState.NotFound -> {
                     Log.i(TAG, "UsbDeviceState NotFound. No op")
@@ -370,16 +296,6 @@ class StreamerViewModel(
     }
 
 
-    fun requestCameraPermission() {
-        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-        updateCameraPermissionState(CameraPermissionRequested)
-    }
-
-    fun requestRecordAudioPermission() {
-        recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-        updateRecordAudioPermissionState(RecordAudioPermissionRequested)
-    }
-
     suspend fun requestUsbPermission(lifecycle: Lifecycle) {
         // In some instances, Android presents the USB device permission dialog and
         // sends onNewIntent to the activity. So, before requesting USB permission, we
@@ -399,15 +315,6 @@ class StreamerViewModel(
         }
     }
 
-    private fun updateCameraPermissionState(cameraPermission: CameraPermissionState) {
-        Log.i(TAG, "updateCameraPermissionState to $cameraPermission")
-        cameraPermissionInternalState.value = cameraPermission
-    }
-
-    private fun updateRecordAudioPermissionState(recordAudioPermission: RecordAudioPermissionState) {
-        Log.i(TAG, "recordAudioPermission set to $recordAudioPermission")
-        recordAudioPermissionInternalState.value = recordAudioPermission
-    }
 
     @Suppress("PrivatePropertyName")
     private val AV_DEVICE_USB_CLASSES: IntArray =

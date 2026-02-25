@@ -21,6 +21,7 @@ import android.view.ViewGroup
 import androidx.annotation.LayoutRes
 import androidx.lifecycle.LifecycleOwner
 import androidx.recyclerview.widget.RecyclerView
+import com.meta.usbvideo.permission.PermissionsViewModel
 import com.meta.usbvideo.viewHolder.StatusScreenViewHolder
 import com.meta.usbvideo.viewHolder.StreamingViewHolder
 import com.meta.usbvideo.viewModel.StreamerViewModel
@@ -29,6 +30,7 @@ import com.meta.usbvideo.viewModel.StreamerViewModel
 class StreamerScreensAdapter(
     val lifecycleOwner: LifecycleOwner,
     private val streamerViewModel: StreamerViewModel,
+    private val permissionsViewModel: PermissionsViewModel,
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     var screens: List<StreamerScreen> = listOf(StreamerScreen.Status)
@@ -39,6 +41,7 @@ class StreamerScreensAdapter(
                 StatusScreenViewHolder(
                     parent.inflate(R.layout.status_screen),
                     streamerViewModel,
+                    permissionsViewModel,
                 )
 
             StreamerScreen.Streaming ->
@@ -54,7 +57,7 @@ class StreamerScreensAdapter(
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (holder) {
-            is StatusScreenViewHolder -> holder.observeViewModel(lifecycleOwner, streamerViewModel)
+            is StatusScreenViewHolder -> holder.observeViewModel(lifecycleOwner)
             is StreamingViewHolder -> Unit
         }
     }
