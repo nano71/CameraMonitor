@@ -26,7 +26,7 @@ limitations under the License.
   <string name="record_audio_permission_denied" translatable="false">✖ Missing Record Audio permission to operate USB capture card. Open your settings to change this under Apps > Installed > USB Video</string>
   <string name="start_streaming" translatable="false">Start Streaming</string>
   <string name="device_connected" translatable="false">✔ USB capture card connected</string>
-  <string name="device_connected_with_details" translatable="false">✔ Connected to %1$s at %2$s Speed</string>
+  <string name="device_connected_with_details" translatable="false">✔ Connected to %1$s at %2$s</string>
   <string name="audio_streaming_wait_state" translatable="false">Starting audio…</string>
   <string name="audio_streaming_success" translatable="false">✔ Audio streaming</string>
   <string name="audio_streaming_failure" translatable="false">✖ Audio streaming failure. %1$s</string>
@@ -44,4 +44,10 @@ limitations under the License.
   <string name="uvc_device_permission_required" translatable="false">❓USB device permission required</string>
   <string name="uvc_device_permission_requested" translatable="false">❓USB device permission requested</string>
   <string name="streaming_stats_toggle_tip" translatable="false">Tap on screen to toggle stats</string>
+  <string name="usb_speed_unknown" translatable="false">Unknown speed</string>
+  <string name="usb_speed_low" translatable="false">Low Speed</string>
+  <string name="usb_speed_full" translatable="false">Full Speed</string>
+  <string name="usb_speed_high" translatable="false">Hi-Speed</string>
+  <string name="usb_speed_super" translatable="false">SuperSpeed</string>
+  <string name="usb_speed_super_plus" translatable="false">SuperSpeed+</string>
 </resources>

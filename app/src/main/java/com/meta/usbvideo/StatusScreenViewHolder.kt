@@ -160,7 +160,8 @@ class StatusScreenViewHolder(
                         context.getString(
                             R.string.device_connected_with_details,
                             usbDevice.productName,
-                            UsbVideoNativeLibrary.getUsbSpeedString(),
+                            streamerViewModel.getUsbSpeedLabel(UsbVideoNativeLibrary.getUsbSpeed())
+                                ?: context.getString(R.string.usb_speed_unknown),
                         )
                     audioStreamingStatus.text = context.getString(R.string.audio_streaming_success)
                 } else {
