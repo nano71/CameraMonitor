@@ -46,7 +46,7 @@ class StreamingViewHolder(
                     width: Int,
                     height: Int
                 ) {
-                    Log.d(
+                    Log.i(
                         TAG,
                         "onSurfaceTextureAvailable() called with: surface = $surfaceTexture, width = $width, height = $height"
                     )
@@ -59,14 +59,14 @@ class StreamingViewHolder(
                     height: Int
                 ) {
                     videoFrame.invalidate()
-                    Log.d(
+                    Log.i(
                         TAG,
                         "onSurfaceTextureSizeChanged() called with: surface = $surface, width = $width, height = $height"
                     )
                 }
 
                 override fun onSurfaceTextureDestroyed(surfaceTexture: SurfaceTexture): Boolean {
-                    Log.d(TAG, "onSurfaceTextureDestroyed() called with: surface = $surfaceTexture")
+                    Log.i(TAG, "onSurfaceTextureDestroyed() called with: surface = $surfaceTexture")
                     videoFrame.updateVideoInfo("")
                     streamerViewModel.surfaceTextureDestroyed(surfaceTexture)
                     return true

@@ -15,9 +15,12 @@
  */
 package com.meta.usbvideo
 
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -25,9 +28,6 @@ import androidx.viewpager2.widget.ViewPager2
 import com.meta.usbvideo.animation.ZoomOutPageTransformer
 import com.meta.usbvideo.permission.getCameraPermissionState
 import com.meta.usbvideo.permission.getRecordAudioPermissionState
-import com.meta.usbvideo.usb.UsbDeviceState
-import com.meta.usbvideo.usb.UsbMonitor
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
@@ -84,7 +84,7 @@ class StreamerActivity : ComponentActivity() {
                     RequestUsbPermission -> {
                         // no-op here but handle separately below by checking for status of USB permission in
                         // onResume because we yield to OS to avoid double permission dialog.
-
+                        Log.i(TAG, "RequestUsbPermission called")
                         if (lifecycle.currentState == Lifecycle.State.RESUMED) {
                             streamerViewModel.requestUsbPermission(this@StreamerActivity.lifecycle)
                         }

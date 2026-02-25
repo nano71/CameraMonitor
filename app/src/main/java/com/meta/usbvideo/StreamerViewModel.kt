@@ -16,7 +16,6 @@
 package com.meta.usbvideo
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.Application
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
@@ -27,11 +26,14 @@ import android.graphics.SurfaceTexture
 import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
+import android.os.Build
+import android.os.SystemClock
 import android.util.Log
 import android.view.Surface
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.core.content.IntentCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.Lifecycle
@@ -49,8 +51,8 @@ import com.meta.usbvideo.permission.toCameraState
 import com.meta.usbvideo.permission.toRecordAudioState
 import com.meta.usbvideo.usb.UsbDeviceState
 import com.meta.usbvideo.usb.UsbMonitor
-import com.meta.usbvideo.usb.UsbMonitor.getUsbManager
 import com.meta.usbvideo.usb.UsbMonitor.findUvcDevice
+import com.meta.usbvideo.usb.UsbMonitor.getUsbManager
 import com.meta.usbvideo.usb.UsbMonitor.setState
 import com.meta.usbvideo.usb.VideoFormat
 import kotlinx.coroutines.delay
@@ -93,6 +95,7 @@ class StreamerViewModel(
 
     var videoFormat: VideoFormat? = null
     var videoFormats: List<VideoFormat> = emptyList()
+    private var usbPermissionRequestedAtMs: Long = 0L
 
     fun setVideoFormatAt(index: Int) {
         videoFormat = videoFormats.get(index)
@@ -147,11 +150,15 @@ class StreamerViewModel(
     fun prepareUsbBroadcastReceivers(activity: ComponentActivity) {
         activity.registerReceiver(usbReceiver, IntentFilter(UsbManager.ACTION_USB_DEVICE_ATTACHED))
         activity.registerReceiver(usbReceiver, IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED))
-        activity.registerReceiver(usbReceiver, IntentFilter(ACTION_USB_PERMISSION), Context.RECEIVER_NOT_EXPORTED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            activity.registerReceiver(usbReceiver, IntentFilter(ACTION_USB_PERMISSION), Context.RECEIVER_NOT_EXPORTED)
+        }
         activity.lifecycle.addObserver(
             LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_DESTROY) {
-                    activity.unregisterReceiver(usbReceiver)
+                when (event) {
+                    Lifecycle.Event.ON_RESUME -> refreshUsbPermissionStateFromSystem("onResume")
+                    Lifecycle.Event.ON_DESTROY -> activity.unregisterReceiver(usbReceiver)
+                    else -> Unit
                 }
             })
     }
@@ -214,12 +221,10 @@ class StreamerViewModel(
 
                 usbDeviceState is UsbDeviceState.PermissionRequired -> {
                     Log.i(TAG, "usb permission required. Will try after few seconds")
-                    delay(3000)
-                    emit(RequestUsbPermission)
                 }
 
                 usbDeviceState is UsbDeviceState.PermissionRequested -> {
-                    Log.i(TAG, "usb permission requested. No op")
+                    Log.i(TAG, "usb permission requested. Waiting for result")
                 }
 
                 usbDeviceState is UsbDeviceState.PermissionGranted -> {
@@ -455,6 +460,7 @@ class StreamerViewModel(
                     }
 
                     ACTION_USB_PERMISSION -> {
+                        usbPermissionRequestedAtMs = 0L
                         if (getUsbManager()?.hasPermission(device) == true) {
                             Log.i(TAG, "Permission granted for device ${device.loggingInfo()}")
                             setState(UsbDeviceState.PermissionGranted(device))
@@ -480,17 +486,44 @@ class StreamerViewModel(
                 }
 
                 else -> {
+                    usbPermissionRequestedAtMs = 0L
                     Log.i(TAG, "askUserUsbDevicePermission: device already have permission. Updating state.")
                     setState(UsbDeviceState.PermissionGranted(device))
                 }
             }
         } else {
             Log.i(TAG, "Requesting USB permission")
+            usbPermissionRequestedAtMs = SystemClock.uptimeMillis()
             setState(UsbDeviceState.PermissionRequested(device))
             val permissionIntent =
                 PendingIntent.getBroadcast(application, 0, Intent(ACTION_USB_PERMISSION), PendingIntent.FLAG_IMMUTABLE)
             // Request permission from user
             usbManager.requestPermission(device, permissionIntent)
+        }
+    }
+
+    private fun refreshUsbPermissionStateFromSystem(reason: String) {
+        val usbManager = getUsbManager() ?: return
+        val state = UsbMonitor.usbDeviceState
+        val device =
+            when (state) {
+                is UsbDeviceState.PermissionRequired -> state.usbDevice
+                is UsbDeviceState.PermissionRequested -> state.usbDevice
+                is UsbDeviceState.PermissionDenied -> state.usbDevice
+                is UsbDeviceState.Attached -> state.usbDevice
+                else -> null
+            } ?: return
+
+        if (usbManager.hasPermission(device)) {
+            usbPermissionRequestedAtMs = 0L
+            Log.i(TAG, "refreshUsbPermissionStateFromSystem($reason): permission is granted, recovering state")
+            setState(UsbDeviceState.PermissionGranted(device))
+            return
+        }
+
+        if (state is UsbDeviceState.PermissionRequested && usbPermissionRequestedAtMs > 0L) {
+            val elapsedMs = SystemClock.uptimeMillis() - usbPermissionRequestedAtMs
+            Log.i(TAG, "refreshUsbPermissionStateFromSystem($reason): permission still pending for ${elapsedMs}ms")
         }
     }
 

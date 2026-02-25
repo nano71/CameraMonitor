@@ -136,7 +136,7 @@ class VideoStreamingConnection(
     override fun close() {
         Log.e(TAG, "close: disconnectUsbAudioStreamingNative")
         EventLooper.post {
-            Log.d("VideoStreamingDescriptor", "stopUsbVideoStreamingNative")
+            Log.i("VideoStreamingDescriptor", "stopUsbVideoStreamingNative")
             UsbVideoNativeLibrary.stopUsbVideoStreamingNative()
             UsbVideoNativeLibrary.disconnectUsbVideoStreamingNative()
             Log.i("VideoStreamingDescriptor", "Closing video streaming descriptor")
