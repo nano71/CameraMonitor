@@ -162,6 +162,10 @@ class StreamerActivity : ComponentActivity() {
             streamerViewModel.recordAudioPermissionStateFlow,
             UsbMonitor.usbDeviceStateFlow,
         ) { cameraPermissionState, recordAudioPermissionState, usbDeviceState ->
+            Log.i(
+                TAG,
+                "uiActionFlow() called with: usbDeviceState = $usbDeviceState"
+            )
             when {
                 cameraPermissionState is CameraPermissionRequired -> {
                     emit(RequestCameraPermission)
@@ -200,7 +204,7 @@ class StreamerActivity : ComponentActivity() {
                 }
 
                 usbDeviceState is UsbDeviceState.Detached -> {
-                    streamerViewModel.onUsbDeviceDetached()
+                    streamerViewModel.onUsbDeviceDetached(usbDeviceState)
                     emit(DismissStreamingScreen)
                 }
 
@@ -232,7 +236,13 @@ class StreamerActivity : ComponentActivity() {
     private fun stopStreaming() {
         Log.i(TAG, "stopStreaming() called")
         val screensCount = screensAdapter.screens.size
+
         if (screensCount > 1) {
+            if (viewPager.currentItem == 0) {
+                screensAdapter.screens = listOf(StreamerScreen.Status)
+                screensAdapter.notifyItemRangeRemoved(1, screensCount - 1)
+                return
+            }
 
             viewPager.setCurrentItem(0, true)
 
@@ -242,9 +252,10 @@ class StreamerActivity : ComponentActivity() {
                         viewPager.currentItem == 0
                     ) {
                         viewPager.unregisterOnPageChangeCallback(this)
-
-                        screensAdapter.screens = listOf(StreamerScreen.Status)
-                        screensAdapter.notifyItemRangeRemoved(1, screensCount - 1)
+                        viewPager.post {
+                            screensAdapter.screens = listOf(StreamerScreen.Status)
+                            screensAdapter.notifyItemRangeRemoved(1, screensCount - 1)
+                        }
                     }
                 }
             })
