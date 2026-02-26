@@ -261,9 +261,21 @@ class StreamerActivity : ComponentActivity() {
         Log.i(TAG, "stopStreaming() called")
         val screensCount = screensAdapter.screens.size
         if (screensCount > 1) {
-            screensAdapter.screens = listOf(StreamerScreen.Status)
-            screensAdapter.notifyItemRangeRemoved(1, screensCount - 1)
+
             viewPager.setCurrentItem(0, true)
+
+            viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+                override fun onPageScrollStateChanged(state: Int) {
+                    if (state == ViewPager2.SCROLL_STATE_IDLE &&
+                        viewPager.currentItem == 0
+                    ) {
+                        viewPager.unregisterOnPageChangeCallback(this)
+
+                        screensAdapter.screens = listOf(StreamerScreen.Status)
+                        screensAdapter.notifyItemRangeRemoved(1, screensCount - 1)
+                    }
+                }
+            })
         }
     }
 
