@@ -14,10 +14,12 @@ private const val TAG = "UsbStreamingController"
 
 internal class UsbStreamingController {
     fun connect(device: UsbDevice) {
+        Log.i(TAG, "connect() called")
         UsbMonitor.connect(device)
     }
 
     suspend fun disconnect() {
+        Log.i(TAG, "disconnect() called")
         EventLooper.call {
             UsbMonitor.disconnect()
         }
@@ -60,6 +62,15 @@ internal class UsbStreamingController {
             videoStreamStatus,
             videoStreamMessage,
         )
+    }
+
+    suspend fun stopStreamingNative() {
+        EventLooper.call {
+            UsbVideoNativeLibrary.stopUsbAudioStreamingNative()
+            UsbVideoNativeLibrary.stopUsbVideoStreamingNative()
+            UsbVideoNativeLibrary.disconnectUsbAudioStreamingNative()
+            UsbVideoNativeLibrary.disconnectUsbVideoStreamingNative()
+        }
     }
 
     suspend fun stopStreaming(

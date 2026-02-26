@@ -23,8 +23,7 @@ class StreamerScreensAdapter(
         return when (StreamerScreen.entries[viewType]) {
             StreamerScreen.Status ->
                 StatusScreenViewHolder(
-                    parent.inflate(R.layout.status_screen),
-                    streamerViewModel,
+                    parent.inflate(R.layout.status_screen)
                 )
 
             StreamerScreen.Streaming ->

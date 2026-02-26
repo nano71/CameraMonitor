@@ -49,7 +49,6 @@ import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.stateIn
 
 private const val TAG = "StreamerViewModel"
-private const val ACTION_USB_PERMISSION: String = "com.meta.usbvideo.USB_PERMISSION"
 
 /** Reactively monitors the state of USB AVC device and implements state transitions methods */
 class StreamerViewModel() : ViewModel() {
@@ -109,7 +108,6 @@ class StreamerViewModel() : ViewModel() {
     }
 
     suspend fun onUsbDeviceConnected(context: Context, usbDeviceState: UsbDeviceState.Connected) {
-        Log.d(TAG, "onUsbDeviceConnected() called with: usbDeviceState = $usbDeviceState")
         usbDeviceState.videoStreamingConnection.let {
             videoFormats = it.videoFormats
             videoFormat = it.findBestVideoFormat(1920, 1080)
@@ -124,18 +122,18 @@ class StreamerViewModel() : ViewModel() {
         setState(streamingState)
     }
 
-    suspend fun onUsbDeviceDetached() {
-        Log.d(TAG, "onUsbDeviceDetached() called")
+    suspend fun onUsbDeviceDetached(usbDeviceState: UsbDeviceState.Detached) {
+        Log.i(TAG, "onUsbDeviceDetached() called")
+        controller.stopStreamingNative()
         controller.disconnect()
+        setState(usbDeviceState)
     }
 
     suspend fun onStreamingStopRequested(usbDeviceState: UsbDeviceState.StreamingStop) {
-        Log.d(TAG, "onStreamingStopRequested() called with: usbDeviceState = $usbDeviceState")
         setState(controller.stopStreaming(usbDeviceState))
     }
 
     suspend fun onStreamingRestartRequested(usbDeviceState: UsbDeviceState.StreamingRestart) {
-        Log.d(TAG, "onStreamingRestartRequested() called with: usbDeviceState = $usbDeviceState")
         setState(controller.restartStreaming(usbDeviceState))
     }
 

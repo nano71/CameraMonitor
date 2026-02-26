@@ -30,7 +30,6 @@ import kotlinx.coroutines.launch
 
 class StatusScreenViewHolder(
     private val rootView: View,
-    private val streamerViewModel: StreamerViewModel,
 ) : RecyclerView.ViewHolder(rootView) {
     private val appPermissionsStatus: TextView = rootView.findViewById(R.id.app_permissions_status)
     private val usbDeviceStatus: TextView = rootView.findViewById(R.id.usb_device_status)
