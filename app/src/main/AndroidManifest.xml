@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <!--
 Copyright (c) Meta Platforms, Inc. and affiliates.
 
@@ -14,67 +15,66 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-<manifest
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.meta.usbvideo"
-    xmlns:tools="http://schemas.android.com/tools"
-    >
 
-  <uses-sdk
-      android:minSdkVersion="30"
-      android:targetSdkVersion="34"
-      />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        package="com.nano71.cameramonitor">
 
-  <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-  <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-sdk
+            android:minSdkVersion="30"
+            android:targetSdkVersion="34" />
 
-  <uses-feature android:name="android.hardware.camera"/>
-  <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
-  <uses-feature android:name="android.hardware.usb.host" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.CAMERA" />
 
-  <application
-          android:name=".app.UsbVideoApplication"
-      android:allowBackup="false"
-      android:icon="@drawable/ic_launcher"
-      android:label="@string/app_name"
-      android:supportsRtl="true"
-      android:theme="@style/Theme.UsbVideo"
-      >
+    <uses-feature android:name="android.hardware.camera" />
+    <uses-feature
+            android:name="android.hardware.camera.autofocus"
+            android:required="false" />
+    <uses-feature android:name="android.hardware.usb.host" />
 
-    <activity
-            android:name=".feature.streamer.StreamerActivity"
-        android:exported="true"
-        android:theme="@style/Theme.UsbVideo.Fullscreen"
-        android:configChanges="orientation|screenLayout|screenSize|density|layoutDirection|smallestScreenSize|touchscreen|navigation|uiMode"
-        android:launchMode="singleTask"
-        android:screenOrientation="landscape"
-        >
+    <application
+            android:name="com.nano71.cameramonitor.app.UsbVideoApplication"
+            android:allowBackup="false"
+            android:icon="@drawable/ic_launcher"
+            android:label="@string/app_name"
+            android:supportsRtl="true"
+            android:theme="@style/Theme.CameraMonitor">
 
-      <layout android:defaultWidth="1920px" android:defaultHeight="1080px" />
+        <activity
+                android:name="com.nano71.cameramonitor.feature.streamer.StreamerActivity"
+                android:exported="true"
+                android:theme="@style/Theme.CameraMonitor.Fullscreen"
+                android:configChanges="orientation|screenLayout|screenSize|density|layoutDirection|smallestScreenSize|touchscreen|navigation|uiMode"
+                android:launchMode="singleTask"
+                android:screenOrientation="landscape">
 
-      <meta-data
-          android:name="com.oculus.vrshell.free_resizing_lock_aspect_ratio"
-          android:value="true"
-          />
+            <layout
+                    android:defaultWidth="1920px"
+                    android:defaultHeight="1080px" />
 
-      <intent-filter>
-        <action android:name="android.intent.action.MAIN" />
-        <category android:name="android.intent.category.LAUNCHER" />
-        <category android:name="com.oculus.intent.category.2D" />
-      </intent-filter>
+            <meta-data
+                    android:name="com.oculus.vrshell.free_resizing_lock_aspect_ratio"
+                    android:value="true" />
 
-      <intent-filter>
-        <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"/>
-      </intent-filter>
-      <meta-data
-          android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
-          android:resource="@xml/uvc_device_filter"
-          />
-    </activity>
-    <provider
-        android:name="androidx.startup.InitializationProvider"
-        android:authorities="${applicationId}.androidx-startup"
-        tools:node="remove">
-    </provider>
-  </application>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="com.oculus.intent.category.2D" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+            </intent-filter>
+
+            <meta-data
+                    android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
+                    android:resource="@xml/uvc_device_filter" />
+        </activity>
+        <provider
+                android:name="androidx.startup.InitializationProvider"
+                android:authorities="${applicationId}.androidx-startup"
+                tools:node="remove" />
+    </application>
 </manifest>

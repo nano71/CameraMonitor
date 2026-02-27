@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <!--
 Copyright (c) Meta Platforms, Inc. and affiliates.
 
@@ -14,17 +15,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-<resources xmlns:tools="http://schemas.android.com/tools">
 
-  <!-- application theme. -->
-  <style name="Theme.UsbVideo" parent="Theme.AppCompat.DayNight.NoActionBar">
-  </style>
+<resources>
 
-  <!-- Full screen theme. -->
-  <style name="Theme.UsbVideo.Fullscreen">
-    <item name="windowActionBar">false</item>
-    <item name="windowNoTitle">true</item>
-    <item name="android:windowFullscreen">true</item>
-  </style>
+    <!-- application theme. -->
+    <style name="Theme.CameraMonitor" parent="Theme.AppCompat.DayNight.NoActionBar" />
+
+    <!-- Full screen theme. -->
+    <style name="Theme.CameraMonitor.Fullscreen">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
 
 </resources>

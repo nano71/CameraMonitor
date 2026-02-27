@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">USB 视频</string>
+    <string name="app_name" translatable="false">相机监视器</string>
     <string name="app_description" translatable="false">这是你的便携式相机监视器</string>
     <string name="app_requirements" translatable="false">需要 USB 采集卡和 HDMI/DisplayPort 信号源</string>
     <string name="app_permissions_explanation" translatable="false">❓运行 USB 采集卡需要相机和录音权限</string>

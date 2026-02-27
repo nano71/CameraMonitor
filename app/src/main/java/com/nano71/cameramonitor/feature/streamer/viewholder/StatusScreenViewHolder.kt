@@ -1,0 +1,194 @@
+package com.nano71.cameramonitor.feature.streamer.viewholder
+
+import android.content.Context
+import android.view.View
+import android.widget.TextView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.RecyclerView
+import com.nano71.cameramonitor.R
+import com.nano71.cameramonitor.core.permission.CameraPermissionDenied
+import com.nano71.cameramonitor.core.permission.CameraPermissionGranted
+import com.nano71.cameramonitor.core.permission.CameraPermissionRequested
+import com.nano71.cameramonitor.core.permission.CameraPermissionRequired
+import com.nano71.cameramonitor.core.permission.CameraPermissionState
+import com.nano71.cameramonitor.core.permission.RecordAudioPermissionDenied
+import com.nano71.cameramonitor.core.permission.RecordAudioPermissionGranted
+import com.nano71.cameramonitor.core.permission.RecordAudioPermissionRequested
+import com.nano71.cameramonitor.core.permission.RecordAudioPermissionRequired
+import com.nano71.cameramonitor.core.permission.RecordAudioPermissionState
+import com.nano71.cameramonitor.core.usb.UsbDeviceState
+import com.nano71.cameramonitor.core.usb.UsbMonitor
+import com.nano71.cameramonitor.core.usb.UsbSpeed
+import com.nano71.cameramonitor.core.usb.UsbVideoNativeLibrary
+import com.nano71.cameramonitor.feature.streamer.StreamerViewModel
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
+
+class StatusScreenViewHolder(
+    private val rootView: View,
+) : RecyclerView.ViewHolder(rootView) {
+    private val appPermissionsStatus: TextView = rootView.findViewById(R.id.app_permissions_status)
+    private val usbDeviceStatus: TextView = rootView.findViewById(R.id.usb_device_status)
+    private val audioStreamingStatus: TextView = rootView.findViewById(R.id.audio_streaming_status)
+    private val videoStreamingStatus: TextView = rootView.findViewById(R.id.video_streaming_status)
+
+    private val context: Context
+        get() = rootView.context
+
+    fun observeViewModel(
+        lifecycleOwner: LifecycleOwner,
+        streamerViewModel: StreamerViewModel,
+    ) {
+        lifecycleOwner.lifecycleScope.launch {
+            lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    combine(
+                        streamerViewModel.cameraPermissionStateFlow,
+                        streamerViewModel.recordAudioPermissionStateFlow,
+                    ) { cameraPermissionState: CameraPermissionState,
+                        recordAudioPermissionState: RecordAudioPermissionState ->
+                        when {
+                            cameraPermissionState is CameraPermissionGranted &&
+                                    recordAudioPermissionState is RecordAudioPermissionGranted ->
+                                context.getString(R.string.app_permissions_granted)
+
+                            cameraPermissionState is CameraPermissionRequired ||
+                                    cameraPermissionState is CameraPermissionRequested ||
+                                    recordAudioPermissionState is RecordAudioPermissionRequired ||
+                                    recordAudioPermissionState is RecordAudioPermissionRequested ->
+                                context.getString(R.string.app_permissions_explanation)
+
+                            cameraPermissionState is CameraPermissionDenied &&
+                                    recordAudioPermissionState is RecordAudioPermissionDenied ->
+                                context.getString(R.string.app_permissions_denied)
+
+                            cameraPermissionState is CameraPermissionDenied ->
+                                context.getString(R.string.camera_permission_denied)
+
+                            recordAudioPermissionState is RecordAudioPermissionDenied ->
+                                context.getString(R.string.record_audio_permission_denied)
+
+                            else -> {
+                                context.getString(R.string.app_permissions_explanation)
+                            }
+                        }
+                    }
+                        .collectLatest { appPermissionsStatus.text = it }
+                }
+                launch { UsbMonitor.usbDeviceStateFlow.collectLatest { setUsbDeviceState(it) } }
+            }
+        }
+    }
+
+    fun setUsbDeviceState(uvcDeviceFlow: UsbDeviceState) {
+        when (uvcDeviceFlow) {
+            UsbDeviceState.NotFound -> {
+                usbDeviceStatus.text = context.getString(R.string.uvc_device_not_found)
+                videoStreamingStatus.text = ""
+                audioStreamingStatus.text = ""
+            }
+
+            is UsbDeviceState.Attached -> {
+                usbDeviceStatus.text = context.getString(R.string.uvc_device_attached)
+                videoStreamingStatus.text = ""
+                audioStreamingStatus.text = ""
+            }
+
+            is UsbDeviceState.Detached -> {
+                usbDeviceStatus.text = context.getString(R.string.uvc_device_detached)
+                videoStreamingStatus.text = ""
+                audioStreamingStatus.text = ""
+            }
+
+            is UsbDeviceState.PermissionRequired -> {
+                usbDeviceStatus.text = context.getString(R.string.uvc_device_permission_required)
+                videoStreamingStatus.text = ""
+                audioStreamingStatus.text = ""
+            }
+
+            is UsbDeviceState.PermissionRequested -> {
+                usbDeviceStatus.text = context.getString(R.string.uvc_device_permission_requested)
+                videoStreamingStatus.text = ""
+                audioStreamingStatus.text = ""
+            }
+
+            is UsbDeviceState.PermissionGranted -> {
+                usbDeviceStatus.text = context.getString(R.string.uvc_device_permission_granted)
+                videoStreamingStatus.text = ""
+                audioStreamingStatus.text = ""
+            }
+
+            is UsbDeviceState.PermissionDenied -> {
+                usbDeviceStatus.text = context.getString(R.string.uvc_device_permission_denied)
+                videoStreamingStatus.text = ""
+                audioStreamingStatus.text = ""
+            }
+
+            is UsbDeviceState.Connected -> {
+                usbDeviceStatus.text = context.getString(R.string.uvc_device_permission_granted)
+                videoStreamingStatus.text = context.getString(R.string.video_streaming_wait_state)
+                audioStreamingStatus.text = context.getString(R.string.audio_streaming_wait_state)
+            }
+
+            is UsbDeviceState.Streaming -> {
+                usbDeviceStatus.text = context.getString(R.string.uvc_device_permission_granted)
+                if (uvcDeviceFlow.audioStreamingSuccess) {
+                    val usbDevice = uvcDeviceFlow.usbDevice
+                    usbDeviceStatus.text =
+                        context.getString(
+                            R.string.device_connected_with_details,
+                            usbDevice.productName,
+                            getUsbSpeedLabel(UsbVideoNativeLibrary.getUsbSpeed())
+                                ?: context.getString(R.string.usb_speed_unknown),
+                        )
+                    audioStreamingStatus.text = context.getString(R.string.audio_streaming_success)
+                } else {
+                    audioStreamingStatus.text =
+                        context.getString(
+                            R.string.audio_streaming_failure,
+                            uvcDeviceFlow.audioStreamingMessage,
+                        )
+                }
+                if (uvcDeviceFlow.videoStreamingSuccess) {
+                    videoStreamingStatus.text = context.getString(R.string.video_streaming_success)
+                } else {
+                    videoStreamingStatus.text =
+                        context.getString(
+                            R.string.video_streaming_failure,
+                            uvcDeviceFlow.videoStreamingMessage,
+                        )
+                }
+            }
+
+            is UsbDeviceState.StreamingRestart -> {
+                audioStreamingStatus.text = context.getString(R.string.audio_streaming_wait_state)
+                videoStreamingStatus.text = context.getString(R.string.video_streaming_wait_state)
+            }
+
+            is UsbDeviceState.StreamingStop -> {
+                audioStreamingStatus.text = context.getString(R.string.audio_streaming_stopped)
+                videoStreamingStatus.text = context.getString(R.string.video_streaming_stopped)
+            }
+
+            is UsbDeviceState.StreamingStopped -> {
+                audioStreamingStatus.text = context.getString(R.string.audio_streaming_stopped)
+                videoStreamingStatus.text = context.getString(R.string.video_streaming_stopped)
+            }
+        }
+    }
+
+    fun getUsbSpeedLabel(usbSpeed: UsbSpeed): String? {
+        return when (usbSpeed) {
+            UsbSpeed.Unknown -> null
+            UsbSpeed.Low -> context.getString(R.string.usb_speed_low)
+            UsbSpeed.Full -> context.getString(R.string.usb_speed_full)
+            UsbSpeed.High -> context.getString(R.string.usb_speed_high)
+            UsbSpeed.Super -> context.getString(R.string.usb_speed_super)
+            UsbSpeed.SuperPlus -> context.getString(R.string.usb_speed_super_plus)
+        }
+    }
+}

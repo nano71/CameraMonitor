@@ -21,12 +21,12 @@ plugins {
 }
 
 android {
-    namespace = "com.meta.usbvideo"
+    namespace = "com.nano71.cameramonitor"
     compileSdk = 36
     ndkVersion = "28.2.13676358"
 
     defaultConfig {
-        applicationId = "com.meta.usbvideo"
+        applicationId = "com.nano71.cameramonitor"
         minSdk = 30
         //noinspection OldTargetApi
         targetSdk = 34
