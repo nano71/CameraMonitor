@@ -18,7 +18,7 @@
 
 #include <aaudio/AAudio.h>
 #include <android/log.h>
-#include <libusb/libusb.h>
+#include <libusb.h>
 
 #include <format>
 #include <memory>

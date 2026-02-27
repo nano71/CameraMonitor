@@ -18,7 +18,7 @@
 
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
-#include <libusb/libusb.h>
+#include <libusb.h>
 #include <libuvc/libuvc.h>
 
 #include <chrono>

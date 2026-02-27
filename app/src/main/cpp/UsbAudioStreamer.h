@@ -17,7 +17,7 @@
 #pragma once
 
 #include <aaudio/AAudio.h>
-#include <libusb/libusb.h>
+#include <libusb.h>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
