@@ -112,6 +112,10 @@ class StreamerActivity : ComponentActivity() {
         viewPager.offscreenPageLimit = 1
         viewPager.setPageTransformer(ZoomOutPageTransformer())
         screensAdapter = StreamerScreensAdapter(this, streamerViewModel)
+        { targetScreen ->
+            val index = StreamerScreen.entries.indexOf(targetScreen)
+            viewPager.setCurrentItem(index, true)
+        }
         streamerViewModel.updateRecordAudioPermissionState(getRecordAudioPermissionState())
         streamerViewModel.updateCameraPermissionState(getCameraPermissionState())
         viewPager.adapter = screensAdapter

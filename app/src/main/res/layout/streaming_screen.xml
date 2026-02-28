@@ -34,20 +34,126 @@ limitations under the License.
             app:layout_constraintBottom_toBottomOf="parent" />
 
     <LinearLayout
+            android:divider="@drawable/divider_spacing"
+            android:showDividers="middle"
             android:id="@+id/bottom_toolbar"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center"
-            android:padding="12dp"
+            android:padding="8dp"
             android:background="@drawable/bg_bottom_toolbar"
             android:clickable="true"
             android:focusable="true"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintWidth_percent="0.4"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="24dp">
+
+        <com.google.android.material.button.MaterialButton
+                android:id="@+id/back_button"
+                app:icon="@drawable/ic_close_48px"
+                style="@style/Widget.MaterialComponents.Button.Icon"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                app:iconSize="32dp"
+                android:padding="8dp"
+                app:iconTint="@color/on_overlay_surface"
+                app:backgroundTint="@color/overlay_surface2"
+                app:cornerRadius="12dp" />
+
+        <View
+                android:layout_width="1dp"
+                android:layout_height="match_parent"
+                android:background="@color/overlay_surface2" />
+
+        <com.google.android.material.button.MaterialButton
+                android:id="@+id/grid_button"
+                app:icon="@drawable/ic_grid_3x3_48px"
+                style="@style/Widget.MaterialComponents.Button.Icon"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                app:iconSize="36dp"
+                android:padding="7dp"
+                app:iconTint="@color/on_overlay_surface"
+                app:backgroundTint="@color/overlay_surface2"
+                app:cornerRadius="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+                android:id="@+id/texture_button"
+                app:icon="@drawable/ic_stroke_full_48px"
+                style="@style/Widget.MaterialComponents.Button.Icon"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                app:iconSize="32dp"
+                android:padding="8dp"
+                app:iconTint="@color/on_overlay_surface"
+                app:backgroundTint="@color/overlay_surface2"
+                app:cornerRadius="12dp" />
+
+
+        <com.google.android.material.button.MaterialButton
+                android:id="@+id/histogram_button"
+                app:icon="@drawable/ic_bar_chart_48px"
+                style="@style/Widget.MaterialComponents.Button.Icon"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                app:iconSize="32dp"
+                android:padding="8dp"
+                app:iconTint="@color/on_overlay_surface"
+                app:backgroundTint="@color/overlay_surface2"
+                app:cornerRadius="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+                android:id="@+id/record_button"
+                app:icon="@drawable/ic_screen_record_48px"
+                style="@style/Widget.MaterialComponents.Button.Icon"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                app:iconSize="32dp"
+                android:padding="8dp"
+                app:iconTint="@color/on_overlay_surface"
+                app:backgroundTint="@color/overlay_surface2"
+                app:cornerRadius="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+                android:id="@+id/screenshot_button"
+                app:icon="@drawable/ic_screenshot_region_48px"
+                style="@style/Widget.MaterialComponents.Button.Icon"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                app:iconSize="36dp"
+                android:padding="6dp"
+                app:iconTint="@color/on_overlay_surface"
+                app:backgroundTint="@color/overlay_surface2"
+                app:cornerRadius="12dp" />
+
+
+    </LinearLayout>
 
     <androidx.appcompat.widget.AppCompatTextView
             android:id="@+id/stream_stats_text"
@@ -60,4 +166,5 @@ limitations under the License.
             android:textSize="12sp"
             android:padding="8dp"
             android:textColor="@color/on_overlay_surface" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

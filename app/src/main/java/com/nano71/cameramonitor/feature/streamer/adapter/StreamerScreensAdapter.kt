@@ -1,5 +1,6 @@
 package com.nano71.cameramonitor.feature.streamer.adapter
 
+import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,6 +16,8 @@ import com.nano71.cameramonitor.feature.streamer.viewholder.StreamingViewHolder
 class StreamerScreensAdapter(
     val lifecycleOwner: LifecycleOwner,
     private val streamerViewModel: StreamerViewModel,
+    private val onNavigate: (StreamerScreen) -> Unit
+
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     var screens: List<StreamerScreen> = listOf(StreamerScreen.Status)
@@ -30,8 +33,15 @@ class StreamerScreensAdapter(
                 StreamingViewHolder(
                     parent.inflate(R.layout.streaming_screen),
                     streamerViewModel,
+                    onNavigate
                 )
         }
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    private fun navigateTo(screen: StreamerScreen) {
+        screens = listOf(screen)
+        notifyDataSetChanged()
     }
 
     fun ViewGroup.inflate(@LayoutRes layoutRes: Int): View =

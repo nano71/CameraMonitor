@@ -17,12 +17,14 @@ package com.nano71.cameramonitor.feature.streamer.viewholder
 
 import android.graphics.SurfaceTexture
 import android.os.SystemClock
+import android.util.Log
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import com.nano71.cameramonitor.R
+import com.nano71.cameramonitor.feature.streamer.StreamerScreen
 import com.nano71.cameramonitor.feature.streamer.StreamerViewModel
 import com.nano71.cameramonitor.feature.streamer.ui.VideoContainerView
 
@@ -31,11 +33,20 @@ private const val TAG = "StreamingViewHolder"
 class StreamingViewHolder(
     private val rootView: View,
     private val streamerViewModel: StreamerViewModel,
+    private val onNavigate: (StreamerScreen) -> Unit
 ) : RecyclerView.ViewHolder(rootView) {
 
     val streamStatsTextView: TextView = rootView.findViewById(R.id.stream_stats_text)
     val videoContainerView: VideoContainerView = rootView.findViewById(R.id.video_container)
     val bottomToolbar: LinearLayout = rootView.findViewById(R.id.bottom_toolbar)
+    val backButton: View = bottomToolbar.findViewById(R.id.back_button)
+    val gridButton: View = bottomToolbar.findViewById(R.id.grid_button)
+    val zebraPrintButton: View = bottomToolbar.findViewById(R.id.texture_button)
+    val histogramButton: View = bottomToolbar.findViewById(R.id.histogram_button)
+    val recordButton: View = bottomToolbar.findViewById(R.id.record_button)
+    val screenShotButton: View = bottomToolbar.findViewById(R.id.screenshot_button)
+
+    var operating = false
     private var lastUpdatedAt = 0L
 
     init {
@@ -67,6 +78,15 @@ class StreamingViewHolder(
         )
         updateStreamStatsText()
         setupToolbarToggle()
+        setupToolbarButtons()
+    }
+
+    private fun setupToolbarButtons() {
+        backButton.setOnClickListener {
+            Log.i(TAG, "offButton clicked")
+            onNavigate(StreamerScreen.Status)
+
+        }
     }
 
     private fun updateStreamStatsText() {
@@ -75,7 +95,9 @@ class StreamingViewHolder(
 
     private fun setupToolbarToggle() {
         rootView.postDelayed({
-            toggleToolbar()
+            if (!operating) {
+                toggleToolbar()
+            }
         }, 3000L)
         rootView.setOnClickListener {
             toggleToolbar()
