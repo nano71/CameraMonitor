@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
 Copyright (c) Meta Platforms, Inc. and affiliates.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +17,7 @@ limitations under the License.
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:app="http://schemas.android.com/apk/res-auto"
         xmlns:tools="http://schemas.android.com/tools"
-        android:id="@+id/root_view"
+        android:id="@+id/root"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clickable="true"
@@ -26,6 +25,7 @@ limitations under the License.
 
     <com.nano71.cameramonitor.feature.streamer.ui.VideoContainerView
             android:id="@+id/video_container"
+            android:background="#000000"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -33,23 +33,31 @@ limitations under the License.
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent" />
 
-    <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/streaming_stats"
+    <LinearLayout
+            android:id="@+id/bottom_toolbar"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            android:layout_marginEnd="24dp"
-            android:background="@drawable/status_bg"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="8dp"
-            android:textSize="14sp"
-            android:textColor="@color/onOverlaySurface"
-            android:maxLines="3"
-            android:drawablePadding="8dp"
-            android:gravity="center_vertical"
-            app:drawableStartCompat="@drawable/sharp_speed_48"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:padding="12dp"
+            android:background="@drawable/bg_bottom_toolbar"
+            android:clickable="true"
+            android:focusable="true"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintWidth_min="240dp"
-            app:layout_constraintBottom_toBottomOf="@id/video_container"
-            android:visibility="gone" />
+            app:layout_constraintWidth_percent="0.4"
+            android:layout_marginBottom="24dp" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/stream_stats_text"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            android:gravity="start"
+            android:layout_margin="12dp"
+            android:textSize="12sp"
+            android:padding="8dp"
+            android:textColor="@color/on_overlay_surface" />
 </androidx.constraintlayout.widget.ConstraintLayout>

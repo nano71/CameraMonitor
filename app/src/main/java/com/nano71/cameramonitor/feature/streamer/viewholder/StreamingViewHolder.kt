@@ -17,9 +17,8 @@ package com.nano71.cameramonitor.feature.streamer.viewholder
 
 import android.graphics.SurfaceTexture
 import android.os.SystemClock
-import android.util.Log
-import android.view.TextureView
 import android.view.View
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
@@ -34,70 +33,79 @@ class StreamingViewHolder(
     private val streamerViewModel: StreamerViewModel,
 ) : RecyclerView.ViewHolder(rootView) {
 
-    val streamingStats: TextView = rootView.findViewById(R.id.streaming_stats)
-    val videoFrame: VideoContainerView = rootView.findViewById(R.id.video_container)
+    val streamStatsTextView: TextView = rootView.findViewById(R.id.stream_stats_text)
+    val videoContainerView: VideoContainerView = rootView.findViewById(R.id.video_container)
+    val bottomToolbar: LinearLayout = rootView.findViewById(R.id.bottom_toolbar)
     private var lastUpdatedAt = 0L
 
     init {
-        val videoTextureView = TextureView(videoFrame.context)
-        videoTextureView.surfaceTextureListener = setupSurfaceTextureListener()
         val videoFormat = streamerViewModel.videoFormat
         val width = videoFormat?.width ?: 1920
         val height = videoFormat?.height ?: 1080
-        videoFrame.addVideoTextureView(videoTextureView, width, height)
-        videoFrame.updateVideoInfo(streamerViewModel.getVideoStreamInfoString())
-        showToggleTip()
-    }
 
-    private fun showToggleTip() {
-        streamingStats.text = rootView.context.getText(R.string.streaming_stats_toggle_tip)
-        streamingStats.isVisible = true
-        rootView.postDelayed({
-            streamingStats.isVisible = false
-        }, 5000L)
-    }
+        videoContainerView.initialize(width, height)
 
+        videoContainerView.setSurfaceCallback(
+            object : VideoContainerView.SurfaceCallback {
 
-    fun setupSurfaceTextureListener(): TextureView.SurfaceTextureListener {
-        return object : TextureView.SurfaceTextureListener {
-            override fun onSurfaceTextureAvailable(
-                surfaceTexture: SurfaceTexture,
-                width: Int,
-                height: Int
-            ) {
-                Log.i(
-                    TAG,
-                    "onSurfaceTextureAvailable() called with: surface = $surfaceTexture, width = $width, height = $height"
-                )
-                streamerViewModel.surfaceTextureAvailable(surfaceTexture, width, height)
-            }
+                override fun onAvailable(surface: SurfaceTexture, width: Int, height: Int) {
+                    streamerViewModel.surfaceTextureAvailable(surface, width, height)
+                }
 
-            override fun onSurfaceTextureSizeChanged(
-                surface: SurfaceTexture,
-                width: Int,
-                height: Int
-            ) {
-                videoFrame.invalidate()
-                Log.i(
-                    TAG,
-                    "onSurfaceTextureSizeChanged() called with: surface = $surface, width = $width, height = $height"
-                )
-            }
+                override fun onDestroyed() {
+                    streamerViewModel.surfaceTextureDestroyed()
+                }
 
-            override fun onSurfaceTextureDestroyed(surfaceTexture: SurfaceTexture): Boolean {
-                Log.i(TAG, "onSurfaceTextureDestroyed() called")
-                videoFrame.updateVideoInfo("")
-                streamerViewModel.surfaceTextureDestroyed()
-                return true
-            }
-
-            override fun onSurfaceTextureUpdated(surfaceTexture: SurfaceTexture) {
-                val now = SystemClock.uptimeMillis()
-                if (now - lastUpdatedAt > 999) {
-                    videoFrame.updateVideoInfo(streamerViewModel.getVideoStreamInfoString())
-                    lastUpdatedAt = now
+                override fun onFrameUpdated() {
+                    val now = SystemClock.uptimeMillis()
+                    if (now - lastUpdatedAt > 999) {
+                        updateStreamStatsText()
+                        lastUpdatedAt = now
+                    }
                 }
             }
+        )
+        updateStreamStatsText()
+        setupToolbarToggle()
+    }
+
+    private fun updateStreamStatsText() {
+        streamStatsTextView.text = streamerViewModel.getVideoStreamInfoString()
+    }
+
+    private fun setupToolbarToggle() {
+        rootView.postDelayed({
+            toggleToolbar()
+        }, 3000L)
+        rootView.setOnClickListener {
+            toggleToolbar()
         }
+    }
+
+    private fun toggleToolbar() {
+        if (bottomToolbar.isVisible) {
+            fadeOut(bottomToolbar)
+        } else {
+            fadeIn(bottomToolbar)
+        }
+    }
+
+    private fun fadeIn(view: View) {
+        view.alpha = 0f
+        view.visibility = View.VISIBLE
+        view.animate()
+            .alpha(1f)
+            .setDuration(200)
+            .start()
+    }
+
+    private fun fadeOut(view: View) {
+        view.animate()
+            .alpha(0f)
+            .setDuration(200)
+            .withEndAction {
+                view.visibility = View.GONE
+            }
+            .start()
     }
 }
