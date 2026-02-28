@@ -20,7 +20,9 @@ import android.graphics.SurfaceTexture
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.TextureView
+import android.view.View
 import android.widget.FrameLayout
+import androidx.core.view.isVisible
 import kotlin.math.abs
 
 class VideoContainerView @JvmOverloads constructor(
@@ -36,6 +38,12 @@ class VideoContainerView @JvmOverloads constructor(
 
     private var textureView: TextureView? = null
     private var surfaceCallback: SurfaceCallback? = null
+    private val gridOverlay = CameraGridOverlay(context)
+
+    fun toggleGridVisible() {
+        gridOverlay.visibility = if (gridOverlay.isVisible) GONE else VISIBLE
+    }
+
     fun initialize(videoWidth: Int, videoHeight: Int) {
         if (this.textureView != null) return
 
@@ -43,6 +51,7 @@ class VideoContainerView @JvmOverloads constructor(
         textureView.surfaceTextureListener = internalListener
 
         addView(textureView, 0, LayoutParams(videoWidth, videoHeight, Gravity.CENTER))
+        addView(gridOverlay, 1, LayoutParams(videoWidth, videoHeight, Gravity.CENTER))
         this.textureView = textureView
     }
 

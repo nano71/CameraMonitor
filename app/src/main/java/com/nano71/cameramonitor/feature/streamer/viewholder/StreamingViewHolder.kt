@@ -85,7 +85,9 @@ class StreamingViewHolder(
         backButton.setOnClickListener {
             Log.i(TAG, "offButton clicked")
             onNavigate(StreamerScreen.Status)
-
+        }
+        gridButton.setOnClickListener {
+            videoContainerView.toggleGridVisible()
         }
     }
 
