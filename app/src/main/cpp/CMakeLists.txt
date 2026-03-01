@@ -18,6 +18,25 @@ set(CMAKE_CXX_STANDARD 20)
 
 project("usbvideo")
 
+# 设置头文件路径 (确保你的 jniLibs/include 下有 jpeglib.h 或 turbojpeg.h)
+set(JPEG_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/jniLibs/include)
+
+# 设置库文件路径
+set(JPEG_LIBRARY ${CMAKE_SOURCE_DIR}/jniLibs/${ANDROID_ABI}/libjpeg.so)
+
+# 【关键】设置 libuvc 和 libyuv 查找时依赖的变量
+set(JPEG_LIBRARIES ${JPEG_LIBRARY})
+set(JPEG_INCLUDE_DIRS ${JPEG_INCLUDE_DIR})
+set(JPEG_FOUND TRUE)
+
+# 创建一个 IMPORTED 目标供后续 target_link_libraries 使用
+# 注意：目标名建议用 "JPEG" 而不是 "JPEG::JPEG"，以兼容旧版 CMake 脚本
+add_library(JPEG SHARED IMPORTED)
+set_target_properties(JPEG PROPERTIES
+    IMPORTED_LOCATION ${JPEG_LIBRARY}
+    INTERFACE_INCLUDE_DIRECTORIES ${JPEG_INCLUDE_DIR}
+)
+
 include(FetchContent)
 
 FetchContent_Declare(
@@ -44,6 +63,12 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(libyuv)
 
+# Fix libyuv undefined symbol: jpeg_std_error
+# The shared library target in libyuv is named 'yuv_shared' but outputs 'libyuv.so'
+if(TARGET yuv_shared)
+    target_link_libraries(yuv_shared PRIVATE JPEG)
+endif()
+
 add_library(${CMAKE_PROJECT_NAME}
         SHARED
         UsbVideoNativeLibrary.cpp
@@ -56,6 +81,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 )
 
 target_link_libraries(${CMAKE_PROJECT_NAME}
+        JPEG
         usb-1.0
         uvc
         yuv
@@ -63,5 +89,5 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
         aaudio
         jnigraphics
         log
+        GLESv2
 )
-

@@ -16,11 +16,9 @@
 package com.nano71.cameramonitor.feature.streamer
 
 import android.content.Context
-import android.graphics.SurfaceTexture
 import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
 import android.util.Log
-import android.view.Surface
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nano71.cameramonitor.core.connection.VideoFormat
@@ -43,8 +41,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.stateIn
 
@@ -91,32 +87,14 @@ class StreamerViewModel() : ViewModel() {
     val recordAudioPermissionStateFlow: StateFlow<RecordAudioPermissionState> =
         recordAudioPermissionInternalState.asStateFlow()
 
-    private val videoSurfaceStateFlow = MutableStateFlow<Surface?>(null)
-
-    fun surfaceTextureAvailable(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
-        videoSurfaceStateFlow.value = Surface(surfaceTexture)
-    }
-
-    fun surfaceTextureDestroyed() {
-        Log.e(TAG, "surfaceTextureDestroyed")
-        videoSurfaceStateFlow.value?.release()
-        videoSurfaceStateFlow.value = null
-    }
-
-    private suspend fun genSurface(): Surface {
-        return videoSurfaceStateFlow.filterNotNull().first()
-    }
-
     suspend fun onUsbDeviceConnected(context: Context, usbDeviceState: UsbDeviceState.Connected) {
         usbDeviceState.videoStreamingConnection.let {
             videoFormats = it.videoFormats
             videoFormat = it.findBestVideoFormat(1920, 1080)
         }
-        val videoStreamingSurface = genSurface()
         val streamingState = controller.startStreaming(
             context,
             usbDeviceState,
-            videoStreamingSurface,
             videoFormat!!
         )
         setState(streamingState)

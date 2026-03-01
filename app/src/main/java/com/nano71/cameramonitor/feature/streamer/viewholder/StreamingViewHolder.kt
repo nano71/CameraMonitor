@@ -15,7 +15,6 @@
  */
 package com.nano71.cameramonitor.feature.streamer.viewholder
 
-import android.graphics.SurfaceTexture
 import android.os.SystemClock
 import android.util.Log
 import android.view.View
@@ -43,9 +42,6 @@ class StreamingViewHolder(
     val backButton: View = bottomToolbar.findViewById(R.id.back_button)
     val gridButton: View = bottomToolbar.findViewById(R.id.grid_button)
     val zebraPrintButton: View = bottomToolbar.findViewById(R.id.texture_button)
-    val histogramButton: View = bottomToolbar.findViewById(R.id.histogram_button)
-    val recordButton: View = bottomToolbar.findViewById(R.id.record_button)
-    val screenShotButton: View = bottomToolbar.findViewById(R.id.screenshot_button)
 
     var operating = false
     var showZebra = false
@@ -61,13 +57,12 @@ class StreamingViewHolder(
 
         videoContainerView.setSurfaceCallback(
             object : VideoContainerView.SurfaceCallback {
-
-                override fun onAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-                    streamerViewModel.surfaceTextureAvailable(surface, width, height)
+                override fun onSurfaceCreated() {
+                    // GL Surface created, we can start streaming if not already
                 }
 
-                override fun onDestroyed() {
-                    streamerViewModel.surfaceTextureDestroyed()
+                override fun onSurfaceDestroyed() {
+                    // GL Surface destroyed
                 }
 
                 override fun onFrameUpdated() {
@@ -93,8 +88,7 @@ class StreamingViewHolder(
             videoContainerView.toggleGridVisible()
         }
         zebraPrintButton.setOnClickListener {
-            showZebra=!showZebra
-            UsbVideoNativeLibrary.setZebraVisible(showZebra)
+            showZebra = !showZebra
         }
     }
 

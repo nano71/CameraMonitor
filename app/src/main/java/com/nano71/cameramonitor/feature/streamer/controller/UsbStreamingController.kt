@@ -18,7 +18,6 @@ package com.nano71.cameramonitor.feature.streamer.controller
 import android.content.Context
 import android.hardware.usb.UsbDevice
 import android.util.Log
-import android.view.Surface
 import com.nano71.cameramonitor.core.connection.VideoFormat
 import com.nano71.cameramonitor.core.eventloop.EventLooper
 import com.nano71.cameramonitor.core.usb.UsbDeviceState
@@ -43,7 +42,6 @@ internal class UsbStreamingController {
     suspend fun startStreaming(
         context: Context,
         usbDeviceState: UsbDeviceState.Connected,
-        surface: Surface,
         videoFormat: VideoFormat
     ): UsbDeviceState.Streaming {
         val (audioStreamStatus, audioStreamMessage) =
@@ -60,7 +58,6 @@ internal class UsbStreamingController {
             EventLooper.call {
                 UsbVideoNativeLibrary.connectUsbVideoStreaming(
                     usbDeviceState.videoStreamingConnection,
-                    surface,
                     videoFormat,
                 ).also {
                     UsbVideoNativeLibrary.startUsbVideoStreamingNative()
