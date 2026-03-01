@@ -89,6 +89,7 @@ class StreamingViewHolder(
         }
         zebraPrintButton.setOnClickListener {
             showZebra = !showZebra
+            videoContainerView.setZebraVisible(showZebra)
         }
     }
 

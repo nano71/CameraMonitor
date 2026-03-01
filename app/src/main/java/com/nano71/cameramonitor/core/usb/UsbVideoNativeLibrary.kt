@@ -21,6 +21,7 @@ import android.media.AudioTrack
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
+import android.os.SystemClock
 import com.nano71.cameramonitor.core.connection.AudioStreamingConnection
 import com.nano71.cameramonitor.core.connection.AudioStreamingFormatTypeDescriptor
 import com.nano71.cameramonitor.core.connection.VideoFormat
@@ -154,6 +155,9 @@ object UsbVideoNativeLibrary {
         private var texY = 0
         private var texUV = 0
 
+        var showZebra = false
+        private val startTime = SystemClock.uptimeMillis()
+
         private lateinit var vertexBuffer: FloatBuffer
         private lateinit var texCoordBuffer: FloatBuffer
 
@@ -210,6 +214,8 @@ object UsbVideoNativeLibrary {
                 varying vec2 vTexCoord;
                 uniform sampler2D uTextureY;
                 uniform sampler2D uTextureUV;
+                uniform float uTime;
+                uniform int uShowZebra;
                 void main() {
                     float y = texture2D(uTextureY, vTexCoord).r;
                     vec4 uv = texture2D(uTextureUV, vTexCoord);
@@ -218,7 +224,20 @@ object UsbVideoNativeLibrary {
                     float r = y + 1.402 * v;
                     float g = y - 0.34414 * u - 0.71414 * v;
                     float b = y + 1.772 * u;
-                    gl_FragColor = vec4(r, g, b, 1.0);
+                    vec4 color = vec4(r, g, b, 1.0);
+                    
+                    if (uShowZebra == 1) {
+                        float luma = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+                        float stripe = mod((gl_FragCoord.x - gl_FragCoord.y + uTime * 0.05), 16.0);
+                        if (stripe < 6.0) {
+                            if (luma >= 0.85) {
+                                color = vec4(1.0, 0.0, 0.0, 1.0);
+                            } else if (luma >= 0.7) {
+                                color = vec4(0.0, 1.0, 0.0, 1.0);
+                            }
+                        }
+                    }
+                    gl_FragColor = color;
                 }
             """.trimIndent()
 
@@ -226,8 +245,22 @@ object UsbVideoNativeLibrary {
                 precision mediump float;
                 varying vec2 vTexCoord;
                 uniform sampler2D uTextureRGBA;
+                uniform float uTime;
+                uniform int uShowZebra;
                 void main() {
-                    gl_FragColor = texture2D(uTextureRGBA, vTexCoord);
+                    vec4 color = texture2D(uTextureRGBA, vTexCoord);
+                    if (uShowZebra == 1) {
+                        float luma = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+                        float stripe = mod((gl_FragCoord.x - gl_FragCoord.y + uTime * 0.05), 16.0);
+                        if (stripe < 6.0) {
+                            if (luma >= 0.85) {
+                                color = vec4(1.0, 0.0, 0.0, 1.0);
+                            } else if (luma >= 0.7) {
+                                color = vec4(0.0, 1.0, 0.0, 1.0);
+                            }
+                        }
+                    }
+                    gl_FragColor = color;
                 }
             """.trimIndent()
 
@@ -263,15 +296,17 @@ object UsbVideoNativeLibrary {
 
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
 
+            val time = (SystemClock.uptimeMillis() - startTime).toFloat()
+
             val format = getVideoFormat()
             if (format == 1) { // NV12
-                drawNV12()
+                drawNV12(time)
             } else { // RGBA or others treated as RGBA
-                drawRGBA()
+                drawRGBA(time)
             }
         }
 
-        private fun drawNV12() {
+        private fun drawNV12(time: Float) {
             GLES20.glUseProgram(programNV12)
 
             val positionHandle = GLES20.glGetAttribLocation(programNV12, "aPosition")
@@ -284,6 +319,12 @@ object UsbVideoNativeLibrary {
 
             val mvpHandle = GLES20.glGetUniformLocation(programNV12, "uMVPMatrix")
             GLES20.glUniformMatrix4fv(mvpHandle, 1, false, mvpMatrix, 0)
+
+            val timeHandle = GLES20.glGetUniformLocation(programNV12, "uTime")
+            GLES20.glUniform1f(timeHandle, time)
+
+            val zebraHandle = GLES20.glGetUniformLocation(programNV12, "uShowZebra")
+            GLES20.glUniform1i(zebraHandle, if (showZebra) 1 else 0)
 
             val texYHandle = GLES20.glGetUniformLocation(programNV12, "uTextureY")
             GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
@@ -301,7 +342,7 @@ object UsbVideoNativeLibrary {
             GLES20.glDisableVertexAttribArray(texCoordHandle)
         }
 
-        private fun drawRGBA() {
+        private fun drawRGBA(time: Float) {
             GLES20.glUseProgram(programRGBA)
 
             val positionHandle = GLES20.glGetAttribLocation(programRGBA, "aPosition")
@@ -314,6 +355,12 @@ object UsbVideoNativeLibrary {
 
             val mvpHandle = GLES20.glGetUniformLocation(programRGBA, "uMVPMatrix")
             GLES20.glUniformMatrix4fv(mvpHandle, 1, false, mvpMatrix, 0)
+
+            val timeHandle = GLES20.glGetUniformLocation(programRGBA, "uTime")
+            GLES20.glUniform1f(timeHandle, time)
+
+            val zebraHandle = GLES20.glGetUniformLocation(programRGBA, "uShowZebra")
+            GLES20.glUniform1i(zebraHandle, if (showZebra) 1 else 0)
 
             val texRGBAHandle = GLES20.glGetUniformLocation(programRGBA, "uTextureRGBA")
             GLES20.glActiveTexture(GLES20.GL_TEXTURE0)

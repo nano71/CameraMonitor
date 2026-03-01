@@ -46,6 +46,10 @@ class VideoContainerView @JvmOverloads constructor(
         gridOverlay.visibility = if (gridOverlay.isVisible) GONE else VISIBLE
     }
 
+    fun setZebraVisible(visible: Boolean) {
+        renderer.showZebra = visible
+    }
+
     fun initialize(videoWidth: Int, videoHeight: Int) {
         if (this.glSurfaceView != null) return
         val glView = GLSurfaceView(context).apply {
