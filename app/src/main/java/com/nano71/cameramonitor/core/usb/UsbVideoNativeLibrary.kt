@@ -23,6 +23,8 @@ import com.nano71.cameramonitor.core.connection.AudioStreamingConnection
 import com.nano71.cameramonitor.core.connection.AudioStreamingFormatTypeDescriptor
 import com.nano71.cameramonitor.core.connection.VideoFormat
 import com.nano71.cameramonitor.core.connection.VideoStreamingConnection
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 enum class UsbSpeed {
     Unknown,
@@ -133,4 +135,67 @@ object UsbVideoNativeLibrary {
     external fun disconnectUsbVideoStreamingNative()
     external fun streamingStatsSummaryString(): String
     external fun setZebraVisible(visible: Boolean)
+
+    /**
+     * Kotlin implementation of dynamic zebra effect to reduce CPU load on C++ thread if needed,
+     * or to allow for easier experimentation.
+     */
+    @JvmStatic
+    fun applyDynamicZebra(
+        pixels: ByteBuffer,
+        width: Int,
+        height: Int,
+        stride: Int,
+        frameCount: Long
+    ) {
+        val stripeWidth = 8
+        val stripePeriod = 16
+        val mask = stripePeriod - 1
+        val threshold100 = 215
+        val threshold70 = 180
+        val offset = (frameCount and mask.toLong()).toInt()
+
+        pixels.order(ByteOrder.nativeOrder())
+        val intBuffer = pixels.asIntBuffer()
+        
+        // Use a temporary array for faster row-based access if needed, 
+        // but DirectByteBuffer.asIntBuffer() is generally quite fast.
+        val row = IntArray(width)
+
+        for (y in 0 until height) {
+            val rowStart = y * stride
+            intBuffer.position(rowStart)
+            intBuffer.get(row)
+            
+            var rowModified = false
+            for (x in 0 until width) {
+                val pixel = row[x]
+                // RGBA (Android order is usually R, G, B, A in bytes, so R is lowest byte)
+                val r = pixel and 0xFF
+                val g = (pixel shr 8) and 0xFF
+                val b = (pixel shr 16) and 0xFF
+
+                // Luma calculation (BT.601)
+                val luma = (77 * r + 150 * g + 29 * b) shr 8
+
+                if (luma >= threshold70) {
+                    val stripe = (x - y + offset) and mask
+                    if (stripe < stripeWidth) {
+                        if (luma >= threshold100) {
+                            // 100%+ -> Red (RGBA: 0xFF0000FF)
+                            row[x] = 0xFF0000FF.toInt()
+                        } else {
+                            // 70%-100% -> Green (RGBA: 0xFF00FF00)
+                            row[x] = 0xFF00FF00.toInt()
+                        }
+                        rowModified = true
+                    }
+                }
+            }
+            if (rowModified) {
+                intBuffer.position(rowStart)
+                intBuffer.put(row)
+            }
+        }
+    }
 }

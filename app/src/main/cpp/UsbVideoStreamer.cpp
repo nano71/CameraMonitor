@@ -52,6 +52,11 @@
 
 #define ULOGE(...) __android_log_print(ANDROID_LOG_ERROR, "UsbVideoStreamer", __VA_ARGS__)
 
+// Bridge function defined in UsbVideoNativeLibrary.cpp
+extern "C" {
+void applyZebraKotlinBridge(uint8_t *pixels, int width, int height, int stride, uint64_t frameCount);
+}
+
 UsbVideoStreamer::UsbVideoStreamer(
         intptr_t deviceFD,
         int32_t width,
@@ -208,53 +213,7 @@ void UsbVideoStreamer::applyDynamicZebra(
         int height,
         int stride,
         uint64_t frameCount) {
-    // ===== 参数 =====
-    const int stripeWidth = 8;     // 条纹宽度
-    const int stripePeriod = 16;    // 必须是 2^n（方便位运算）
-    const int mask = stripePeriod - 1;
-
-    const int threshold100 = 215;   // 100+
-    const int threshold70 = 180;   // 70
-
-    int offset = frameCount & mask; // 比 % 快
-
-    for (int y = 0; y < height; ++y) {
-
-        uint32_t *row = (uint32_t *) (pixels + y * stride * 4);
-
-        for (int x = 0; x < width; ++x) {
-
-            uint32_t pixel = row[x];
-
-            // RGBA (Android 常见顺序)
-            uint8_t r = pixel & 0xFF;
-            uint8_t g = (pixel >> 8) & 0xFF;
-            uint8_t b = (pixel >> 16) & 0xFF;
-
-            // ===== 整数亮度公式（BT.601 近似）=====
-            // 0.299R + 0.587G + 0.114B
-            // ≈ (77R + 150G + 29B) >> 8
-            int luma = (77 * r + 150 * g + 29 * b) >> 8;
-
-            if (luma >= threshold70) {
-
-                // 45° 斜纹
-                int stripe = (x - y + offset) & mask;
-
-                if (stripe < stripeWidth) {
-
-                    // ===== 双区间 =====
-                    if (luma >= threshold100) {
-                        // 100+ → 红色
-                        row[x] = 0xFF0000FF;  // RGBA
-                    } else {
-                        // 70 → 绿色
-                        row[x] = 0xFF00FF00;
-                    }
-                }
-            }
-        }
-    }
+    applyZebraKotlinBridge(pixels, width, height, stride, frameCount);
 }
 
 /* This callback function runs once per frame. */
@@ -420,7 +379,7 @@ void UsbVideoStreamer::captureFrameCallback(uvc_frame_t *frame, void *user_data)
     }
     if (self->showZebra_) {
 
-        applyDynamicZebra((uint8_t *) buffer.bits, buffer.width, buffer.height, buffer.stride, stats.frames);
+        self->applyDynamicZebra((uint8_t *) buffer.bits, buffer.width, buffer.height, buffer.stride, stats.frames);
     }
     ANativeWindow_unlockAndPost(preview_window);
 

@@ -24,7 +24,9 @@
 #include "UsbVideoStreamer.h"
 #include "clog.h"
 
-static JavaVM *javaVM_ = nullptr;
+JavaVM *g_javaVM = nullptr;
+jclass g_zebraClass = nullptr;
+jmethodID g_zebraMethod = nullptr;
 
 static std::unique_ptr<UsbAudioStreamer> streamer_{};
 static std::unique_ptr<UsbVideoStreamer> uvcStreamer_{};
@@ -35,22 +37,54 @@ static ANativeWindowOwner previewWindow_ = ANativeWindowOwner(nullptr, &ANativeW
 extern "C" {
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *jvm, void *reserved) {
-    javaVM_ = jvm;
+    g_javaVM = jvm;
     JNIEnv *env;
-    if (JNI_OK != jvm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_4)) {
+    if (JNI_OK != jvm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6)) {
         CLOGE("Get JNIEnv failed");
         return JNI_ERR;
     }
+
+    jclass localClass = env->FindClass("com/nano71/cameramonitor/core/usb/UsbVideoNativeLibrary");
+    if (localClass) {
+        g_zebraClass = (jclass) env->NewGlobalRef(localClass);
+        g_zebraMethod = env->GetStaticMethodID(g_zebraClass, "applyDynamicZebra", "(Ljava/nio/ByteBuffer;IIIJ)V");
+    }
+
     CLOGI("JNI_OnLoad success!");
-    return JNI_VERSION_1_4;
+    return JNI_VERSION_1_6;
 }
 
 JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *jvm, void *reserved) {
-    if (jvm) {
-        jvm->DestroyJavaVM();
+    JNIEnv *env;
+    if (jvm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) == JNI_OK) {
+        if (g_zebraClass) {
+            env->DeleteGlobalRef(g_zebraClass);
+            g_zebraClass = nullptr;
+        }
     }
-    javaVM_ = nullptr;
+    g_javaVM = nullptr;
     CLOGI("JNI_OnUnload success!");
+}
+
+void applyZebraKotlinBridge(uint8_t *pixels, int width, int height, int stride, uint64_t frameCount) {
+    if (!g_javaVM || !g_zebraClass || !g_zebraMethod) return;
+
+    JNIEnv *env;
+    jint res = g_javaVM->GetEnv((void **) &env, JNI_VERSION_1_6);
+    if (res == JNI_EDETACHED) {
+        if (g_javaVM->AttachCurrentThread(&env, nullptr) != 0) {
+            CLOGE("Failed to attach thread for zebra");
+            return;
+        }
+    } else if (res != JNI_OK) {
+        return;
+    }
+
+    jobject byteBuffer = env->NewDirectByteBuffer(pixels, (jlong) stride * height * 4);
+    if (byteBuffer) {
+        env->CallStaticVoidMethod(g_zebraClass, g_zebraMethod, byteBuffer, width, height, stride, (jlong) frameCount);
+        env->DeleteLocalRef(byteBuffer);
+    }
 }
 
 JNIEXPORT jint JNICALL
