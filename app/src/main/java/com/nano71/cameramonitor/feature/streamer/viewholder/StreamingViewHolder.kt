@@ -24,6 +24,7 @@ import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import com.nano71.cameramonitor.R
+import com.nano71.cameramonitor.core.usb.UsbVideoNativeLibrary
 import com.nano71.cameramonitor.feature.streamer.StreamerScreen
 import com.nano71.cameramonitor.feature.streamer.StreamerViewModel
 import com.nano71.cameramonitor.feature.streamer.ui.VideoContainerView
@@ -47,6 +48,8 @@ class StreamingViewHolder(
     val screenShotButton: View = bottomToolbar.findViewById(R.id.screenshot_button)
 
     var operating = false
+    var showZebra = false
+
     private var lastUpdatedAt = 0L
 
     init {
@@ -88,6 +91,10 @@ class StreamingViewHolder(
         }
         gridButton.setOnClickListener {
             videoContainerView.toggleGridVisible()
+        }
+        zebraPrintButton.setOnClickListener {
+            showZebra=!showZebra
+            UsbVideoNativeLibrary.setZebraVisible(showZebra)
         }
     }
 

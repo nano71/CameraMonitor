@@ -24,7 +24,7 @@
 #include "UsbVideoStreamer.h"
 #include "clog.h"
 
-static JavaVM* javaVM_ = nullptr;
+static JavaVM *javaVM_ = nullptr;
 
 static std::unique_ptr<UsbAudioStreamer> streamer_{};
 static std::unique_ptr<UsbVideoStreamer> uvcStreamer_{};
@@ -34,143 +34,146 @@ static ANativeWindowOwner previewWindow_ = ANativeWindowOwner(nullptr, &ANativeW
 
 extern "C" {
 
-JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* jvm, void* reserved) {
-  javaVM_ = jvm;
-  JNIEnv* env;
-  if (JNI_OK != jvm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_4)) {
-    CLOGE("Get JNIEnv failed");
-    return JNI_ERR;
-  }
-  CLOGI("JNI_OnLoad success!");
-  return JNI_VERSION_1_4;
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *jvm, void *reserved) {
+    javaVM_ = jvm;
+    JNIEnv *env;
+    if (JNI_OK != jvm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_4)) {
+        CLOGE("Get JNIEnv failed");
+        return JNI_ERR;
+    }
+    CLOGI("JNI_OnLoad success!");
+    return JNI_VERSION_1_4;
 }
 
-JNIEXPORT void JNICALL JNI_OnUnload(JavaVM* jvm, void* reserved) {
-  if (jvm) {
-    jvm->DestroyJavaVM();
-  }
-  javaVM_ = nullptr;
-  CLOGI("JNI_OnUnload success!");
+JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *jvm, void *reserved) {
+    if (jvm) {
+        jvm->DestroyJavaVM();
+    }
+    javaVM_ = nullptr;
+    CLOGI("JNI_OnUnload success!");
 }
 
 JNIEXPORT jint JNICALL
 Java_com_nano71_cameramonitor_core_usb_UsbVideoNativeLibrary_getUsbDeviceSpeed(JNIEnv *env, jobject self) {
-  if (streamer_ != nullptr) {
-    return streamer_->getUsbDeviceSpeed();
-  }
-  return 0; /* LIBUSB_SPEED_UNKNOWN */
+    if (streamer_ != nullptr) {
+        return streamer_->getUsbDeviceSpeed();
+    }
+    return 0; /* LIBUSB_SPEED_UNKNOWN */
 }
 
 JNIEXPORT jboolean JNICALL
 Java_com_nano71_cameramonitor_core_usb_UsbVideoNativeLibrary_connectUsbVideoStreamingNative(
-    JNIEnv* env,
-    jobject tis,
-    jint deviceFd,
-    jint width,
-    jint height,
-    jint fps,
-    jint libuvcFrameFormat,
-    jobject jSurface) {
-  CLOGE(
-          " Java_com_nano71_cameramonitor_core_usb_UsbVideoNativeLibrary__connectUsbVideoStreamingNative called with deviceFd %d",
-      deviceFd);
-  if (uvcStreamer_ == nullptr) {
-    uvcStreamer_ = std::make_unique<UsbVideoStreamer>(
-        (intptr_t)deviceFd, width, height, fps, static_cast<uvc_frame_format>(libuvcFrameFormat));
-    previewWindow_.reset(ANativeWindow_fromSurface(env, jSurface));
-    return uvcStreamer_->configureOutput(previewWindow_.get());
-  }
-  return false;
+        JNIEnv *env,
+        jobject tis,
+        jint deviceFd,
+        jint width,
+        jint height,
+        jint fps,
+        jint libuvcFrameFormat,
+        jobject jSurface) {
+    CLOGE(
+            " Java_com_nano71_cameramonitor_core_usb_UsbVideoNativeLibrary__connectUsbVideoStreamingNative called with deviceFd %d",
+            deviceFd);
+    if (uvcStreamer_ == nullptr) {
+        uvcStreamer_ = std::make_unique<UsbVideoStreamer>(
+                (intptr_t) deviceFd, width, height, fps, static_cast<uvc_frame_format>(libuvcFrameFormat));
+        previewWindow_.reset(ANativeWindow_fromSurface(env, jSurface));
+        return uvcStreamer_->configureOutput(previewWindow_.get());
+    }
+    return false;
 }
 
+JNIEXPORT void JNICALL Java_com_nano71_cameramonitor_core_usb_UsbVideoNativeLibrary_setZebraVisible(JNIEnv *env, jobject, jboolean visible) {
+    if (uvcStreamer_) uvcStreamer_->setZebraVisible(visible);
+}
 
 JNIEXPORT jboolean JNICALL
 Java_com_nano71_cameramonitor_core_usb_UsbVideoNativeLibrary_startUsbVideoStreamingNative(
-        JNIEnv* env,
+        JNIEnv *env,
         jobject self) {
-  if (uvcStreamer_ != nullptr) {
-    return uvcStreamer_->start();
-  }
-  return false;
+    if (uvcStreamer_ != nullptr) {
+        return uvcStreamer_->start();
+    }
+    return false;
 }
 
 JNIEXPORT void JNICALL Java_com_nano71_cameramonitor_core_usb_UsbVideoNativeLibrary_stopUsbVideoStreamingNative(
-    JNIEnv* env,
-    jobject self) {
-  if (uvcStreamer_ != nullptr) {
-    uvcStreamer_->stop();
-  }
+        JNIEnv *env,
+        jobject self) {
+    if (uvcStreamer_ != nullptr) {
+        uvcStreamer_->stop();
+    }
 }
 
 JNIEXPORT void JNICALL Java_com_nano71_cameramonitor_core_usb_UsbVideoNativeLibrary_disconnectUsbVideoStreamingNative(
-        JNIEnv* env,
+        JNIEnv *env,
         jobject self) {
-  uvcStreamer_ = nullptr;
-  previewWindow_.reset(nullptr);
+    uvcStreamer_ = nullptr;
+    previewWindow_.reset(nullptr);
 }
 
 JNIEXPORT jstring JNICALL Java_com_nano71_cameramonitor_core_usb_UsbVideoNativeLibrary_streamingStatsSummaryString(
-    JNIEnv* env,
-    jobject self) {
-  std::string result = "";
-  if (streamer_ != nullptr) {
-    result += streamer_->statsSummaryString();
-    result += "\n";
-  }
-  if (uvcStreamer_ != nullptr) {
-    result += uvcStreamer_->statsSummaryString();
-  }
-  return env->NewStringUTF(result.c_str());
+        JNIEnv *env,
+        jobject self) {
+    std::string result = "";
+    if (streamer_ != nullptr) {
+        result += streamer_->statsSummaryString();
+        result += "\n";
+    }
+    if (uvcStreamer_ != nullptr) {
+        result += uvcStreamer_->statsSummaryString();
+    }
+    return env->NewStringUTF(result.c_str());
 }
 
 JNIEXPORT jboolean JNICALL
 Java_com_nano71_cameramonitor_core_usb_UsbVideoNativeLibrary_connectUsbAudioStreamingNative(
-    JNIEnv* env,
-    jobject tis,
-    jint deviceFd,
-    jint jAudioFormat,
-    jint samplingFrequency,
-    jint subFrameSize,
-    jint channelCount,
-    jint jAudioPerfMode,
-    jint outputFramesPerBuffer) {
-  if (streamer_ != nullptr) {
-    //CLOGE("startUsbAudioStreamingNative called before stopUsbAudioStreamingNative was called");
-    return true;
-  }
-  streamer_ = std::make_unique<UsbAudioStreamer>(
-      (intptr_t)deviceFd,
-      jAudioFormat,
-      samplingFrequency,
-      subFrameSize,
-      channelCount,
-      jAudioPerfMode,
-      outputFramesPerBuffer);
-  return streamer_ != nullptr;
+        JNIEnv *env,
+        jobject tis,
+        jint deviceFd,
+        jint jAudioFormat,
+        jint samplingFrequency,
+        jint subFrameSize,
+        jint channelCount,
+        jint jAudioPerfMode,
+        jint outputFramesPerBuffer) {
+    if (streamer_ != nullptr) {
+        //CLOGE("startUsbAudioStreamingNative called before stopUsbAudioStreamingNative was called");
+        return true;
+    }
+    streamer_ = std::make_unique<UsbAudioStreamer>(
+            (intptr_t) deviceFd,
+            jAudioFormat,
+            samplingFrequency,
+            subFrameSize,
+            channelCount,
+            jAudioPerfMode,
+            outputFramesPerBuffer);
+    return streamer_ != nullptr;
 }
 
 
 JNIEXPORT void JNICALL Java_com_nano71_cameramonitor_core_usb_UsbVideoNativeLibrary_disconnectUsbAudioStreamingNative(
-        JNIEnv* env,
+        JNIEnv *env,
         jobject self) {
-  if (streamer_ != nullptr) {
-    streamer_ = nullptr;
-  }
+    if (streamer_ != nullptr) {
+        streamer_ = nullptr;
+    }
 }
 JNIEXPORT void JNICALL Java_com_nano71_cameramonitor_core_usb_UsbVideoNativeLibrary_startUsbAudioStreamingNative(
-        JNIEnv* env,
+        JNIEnv *env,
         jobject self) {
-  if (streamer_ != nullptr) {
-    streamer_->start();
-  }
+    if (streamer_ != nullptr) {
+        streamer_->start();
+    }
 }
 
 JNIEXPORT void JNICALL Java_com_nano71_cameramonitor_core_usb_UsbVideoNativeLibrary_stopUsbAudioStreamingNative(
-    JNIEnv* env,
-    jobject self) {
-  if (streamer_ != nullptr) {
-    streamer_->stop();
-  }
+        JNIEnv *env,
+        jobject self) {
+    if (streamer_ != nullptr) {
+        streamer_->stop();
+    }
 }
 
 } // extern "C"

@@ -132,4 +132,5 @@ object UsbVideoNativeLibrary {
     external fun stopUsbVideoStreamingNative()
     external fun disconnectUsbVideoStreamingNative()
     external fun streamingStatsSummaryString(): String
+    external fun setZebraVisible(visible: Boolean)
 }

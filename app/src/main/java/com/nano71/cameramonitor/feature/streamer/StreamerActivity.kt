@@ -68,7 +68,7 @@ object RequestUsbPermission : UiAction
 object PresentStreamingScreen : UiAction
 object DismissStreamingScreen : UiAction
 
-private const val ACTION_USB_PERMISSION: String = "com.nano71.usbvideo.USB_PERMISSION"
+private const val ACTION_USB_PERMISSION: String = "com.nano71.cameramonitor.USB_PERMISSION"
 
 enum class StreamerScreen {
     Status,
