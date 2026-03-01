@@ -53,12 +53,6 @@ class StreamerScreensAdapter(
         }
     }
 
-    @SuppressLint("NotifyDataSetChanged")
-    private fun navigateTo(screen: StreamerScreen) {
-        screens = listOf(screen)
-        notifyDataSetChanged()
-    }
-
     fun ViewGroup.inflate(@LayoutRes layoutRes: Int): View =
         LayoutInflater.from(context).inflate(layoutRes, this, false)
 

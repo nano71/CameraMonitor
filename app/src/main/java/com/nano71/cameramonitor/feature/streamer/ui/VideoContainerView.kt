@@ -32,14 +32,7 @@ class VideoContainerView @JvmOverloads constructor(
 ) : FrameLayout(context, attrs) {
     private val renderer = UsbVideoNativeLibrary.VideoRenderer()
 
-    interface SurfaceCallback {
-        fun onSurfaceCreated()
-        fun onSurfaceDestroyed()
-        fun onFrameUpdated()
-    }
-
     private var glSurfaceView: GLSurfaceView? = null
-    private var surfaceCallback: SurfaceCallback? = null
     private val gridOverlay = CameraGridOverlay(context)
 
     fun toggleGridVisible() {
@@ -57,14 +50,12 @@ class VideoContainerView @JvmOverloads constructor(
             setRenderer(renderer)
             renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
         }
+
         addView(glView, 0, LayoutParams(videoWidth, videoHeight, Gravity.CENTER))
 
         addView(gridOverlay, 1, LayoutParams(videoWidth, videoHeight, Gravity.CENTER))
     }
 
-    fun setSurfaceCallback(callback: SurfaceCallback) {
-        surfaceCallback = callback
-    }
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
         super.onLayout(changed, left, top, right, bottom)

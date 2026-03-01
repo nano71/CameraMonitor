@@ -46,8 +46,6 @@ class StreamingViewHolder(
     var operating = false
     var showZebra = false
 
-    private var lastUpdatedAt = 0L
-
     init {
         val videoFormat = streamerViewModel.videoFormat
         val width = videoFormat?.width ?: 1920
@@ -55,25 +53,6 @@ class StreamingViewHolder(
 
         videoContainerView.initialize(width, height)
 
-        videoContainerView.setSurfaceCallback(
-            object : VideoContainerView.SurfaceCallback {
-                override fun onSurfaceCreated() {
-                    // GL Surface created, we can start streaming if not already
-                }
-
-                override fun onSurfaceDestroyed() {
-                    // GL Surface destroyed
-                }
-
-                override fun onFrameUpdated() {
-                    val now = SystemClock.uptimeMillis()
-                    if (now - lastUpdatedAt > 999) {
-                        updateStreamStatsText()
-                        lastUpdatedAt = now
-                    }
-                }
-            }
-        )
         updateStreamStatsText()
         setupToolbarToggle()
         setupToolbarButtons()
