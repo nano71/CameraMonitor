@@ -143,7 +143,7 @@ object UsbVideoNativeLibrary {
     @JvmStatic
     external fun updateTextures(texY: Int, texUV: Int): Boolean
 
-    class VideoRenderer : GLSurfaceView.Renderer {
+    class VideoRenderer(private val context: Context) : GLSurfaceView.Renderer {
         private var programNV12 = 0
         private var programRGBA = 0
 
@@ -193,74 +193,16 @@ object UsbVideoNativeLibrary {
         }
 
         private fun initShaders() {
-            val vertexShaderCode = """
-                attribute vec4 aPosition;
-                attribute vec2 aTexCoord;
-                varying vec2 vTexCoord;
-                uniform mat4 uMVPMatrix;
-                void main() {
-                    gl_Position = uMVPMatrix * aPosition;
-                    vTexCoord = aTexCoord;
-                }
-            """.trimIndent()
-
-            val fragmentShaderNV12Code = """
-                precision mediump float;
-                varying vec2 vTexCoord;
-                uniform sampler2D uTextureY;
-                uniform sampler2D uTextureUV;
-                uniform float uTime;
-                uniform int uShowZebra;
-                void main() {
-                    float y = texture2D(uTextureY, vTexCoord).r;
-                    vec4 uv = texture2D(uTextureUV, vTexCoord);
-                    float u = uv.r - 0.5;
-                    float v = uv.a - 0.5;
-                    float r = y + 1.402 * v;
-                    float g = y - 0.34414 * u - 0.71414 * v;
-                    float b = y + 1.772 * u;
-                    vec4 color = vec4(r, g, b, 1.0);
-                    
-                    if (uShowZebra == 1) {
-                        float luma = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-                        float stripe = mod((gl_FragCoord.x - gl_FragCoord.y + uTime * 0.05), 16.0);
-                        if (stripe < 6.0) {
-                            if (luma >= 0.85) {
-                                color = vec4(1.0, 0.0, 0.0, 1.0);
-                            } else if (luma >= 0.7) {
-                                color = vec4(0.0, 1.0, 0.0, 1.0);
-                            }
-                        }
-                    }
-                    gl_FragColor = color;
-                }
-            """.trimIndent()
-
-            val fragmentShaderRGBACode = """
-                precision mediump float;
-                varying vec2 vTexCoord;
-                uniform sampler2D uTextureRGBA;
-                uniform float uTime;
-                uniform int uShowZebra;
-                void main() {
-                    vec4 color = texture2D(uTextureRGBA, vTexCoord);
-                    if (uShowZebra == 1) {
-                        float luma = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-                        float stripe = mod((gl_FragCoord.x - gl_FragCoord.y + uTime * 0.05), 16.0);
-                        if (stripe < 6.0) {
-                            if (luma >= 0.85) {
-                                color = vec4(1.0, 0.0, 0.0, 1.0);
-                            } else if (luma >= 0.7) {
-                                color = vec4(0.0, 1.0, 0.0, 1.0);
-                            }
-                        }
-                    }
-                    gl_FragColor = color;
-                }
-            """.trimIndent()
+            val vertexShaderCode = loadShaderFromAssets("shaders/video_v.glsl")
+            val fragmentShaderNV12Code = loadShaderFromAssets("shaders/video_nv12_f.glsl")
+            val fragmentShaderRGBACode = loadShaderFromAssets("shaders/video_rgba_f.glsl")
 
             programNV12 = createProgram(vertexShaderCode, fragmentShaderNV12Code)
             programRGBA = createProgram(vertexShaderCode, fragmentShaderRGBACode)
+        }
+
+        private fun loadShaderFromAssets(fileName: String): String {
+            return context.assets.open(fileName).bufferedReader().use { it.readText() }
         }
 
         private fun createProgram(vSource: String, fSource: String): Int {

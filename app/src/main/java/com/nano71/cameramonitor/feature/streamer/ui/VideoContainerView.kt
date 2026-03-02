@@ -27,7 +27,7 @@ class VideoContainerView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
 ) : FrameLayout(context, attrs) {
-    private val renderer = UsbVideoNativeLibrary.VideoRenderer()
+    private val renderer = UsbVideoNativeLibrary.VideoRenderer(context)
 
     private var glSurfaceView: GLSurfaceView? = null
     private val gridOverlay = CameraGridOverlay(context)
