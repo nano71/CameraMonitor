@@ -92,12 +92,14 @@ class StreamerViewModel() : ViewModel() {
             videoFormats = it.videoFormats
             videoFormat = it.findBestVideoFormat(1920, 1080)
         }
-        val streamingState = controller.startStreaming(
-            context,
-            usbDeviceState,
-            videoFormat!!
-        )
-        setState(streamingState)
+        if (videoFormat != null) {
+            val streamingState = controller.startStreaming(
+                context,
+                usbDeviceState,
+                videoFormat!!
+            )
+            setState(streamingState)
+        }
     }
 
     suspend fun onUsbDeviceDetached(usbDeviceState: UsbDeviceState.Detached) {
@@ -116,18 +118,18 @@ class StreamerViewModel() : ViewModel() {
     }
 
     fun getVideoStreamInfoString(): String {
-        val videoStatsLine =
-            UsbVideoNativeLibrary.streamingStatsSummaryString()
-                .lineSequence()
-                .map { it.trim() }
-                .filter { it.contains("x") && it.contains("fps") }
-                .lastOrNull()
+        if (videoFormat != null) {
+            val videoStatsLine =
+                UsbVideoNativeLibrary.streamingStatsSummaryString()
+                    .lineSequence()
+                    .map { it.trim() }
+                    .lastOrNull { it.contains("x") && it.contains("fps") }
 
-        if (videoStatsLine != null) {
-            return videoStatsLine
+            if (videoStatsLine != null) {
+                return videoFormat?.fourccFormat.plus(" $videoStatsLine")
+            }
         }
-        val selectedVideoFormat = videoFormat ?: return ""
-        return "${selectedVideoFormat.fourccFormat} ${selectedVideoFormat.width}x${selectedVideoFormat.height} @${selectedVideoFormat.fps} fps"
+        return ""
     }
 
     fun updateCameraPermissionFromStatus(permissionStatus: PermissionStatus) {

@@ -157,8 +157,7 @@ class StatusScreenViewHolder(
                         context.getString(
                             R.string.device_connected_with_details,
                             usbDevice.productName,
-                            getUsbSpeedLabel(UsbVideoNativeLibrary.getUsbSpeed())
-                                ?: context.getString(R.string.usb_speed_unknown),
+                            getUsbSpeedLabel(UsbVideoNativeLibrary.getUsbSpeed()),
                         )
                     audioStreamingStatus.text = context.getString(R.string.audio_streaming_success)
                 } else {
@@ -196,9 +195,9 @@ class StatusScreenViewHolder(
         }
     }
 
-    fun getUsbSpeedLabel(usbSpeed: UsbSpeed): String? {
+    fun getUsbSpeedLabel(usbSpeed: UsbSpeed): String {
         return when (usbSpeed) {
-            UsbSpeed.Unknown -> null
+            UsbSpeed.Unknown -> ""
             UsbSpeed.Low -> context.getString(R.string.usb_speed_low)
             UsbSpeed.Full -> context.getString(R.string.usb_speed_full)
             UsbSpeed.High -> context.getString(R.string.usb_speed_high)

@@ -22,9 +22,6 @@ import android.view.Gravity
 import android.widget.FrameLayout
 import androidx.core.view.isVisible
 import com.nano71.cameramonitor.core.usb.UsbVideoNativeLibrary
-import javax.microedition.khronos.egl.EGLConfig
-import javax.microedition.khronos.opengles.GL10
-import kotlin.math.abs
 
 class VideoContainerView @JvmOverloads constructor(
     context: Context,
@@ -44,39 +41,16 @@ class VideoContainerView @JvmOverloads constructor(
     }
 
     fun initialize(videoWidth: Int, videoHeight: Int) {
-        if (this.glSurfaceView != null) return
-        val glView = GLSurfaceView(context).apply {
+        if (glSurfaceView != null) return
+        glSurfaceView = GLSurfaceView(context).apply {
             setEGLContextClientVersion(2)
             setRenderer(renderer)
             renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
         }
 
-        addView(glView, 0, LayoutParams(videoWidth, videoHeight, Gravity.CENTER))
+        val params = LayoutParams(videoWidth, videoHeight, Gravity.CENTER)
 
-        addView(gridOverlay, 1, LayoutParams(videoWidth, videoHeight, Gravity.CENTER))
-    }
-
-
-    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
-        super.onLayout(changed, left, top, right, bottom)
-        val glSurfaceView = this.glSurfaceView ?: return
-
-        val width = glSurfaceView.width
-        val height = glSurfaceView.height
-        if (width > 0 && height > 0) {
-            glSurfaceView.pivotX = width.toFloat() / 2f
-            glSurfaceView.pivotY = height.toFloat() / 2f
-            val scaleX = abs(right - left).toFloat() / width
-            val scaleY = abs(bottom - top).toFloat() / height
-
-            val uniformScale = minOf(scaleX, scaleY)
-            if (abs(uniformScale - 1.0f) > 0.0001f) {
-                glSurfaceView.scaleX = uniformScale
-                glSurfaceView.scaleY = uniformScale
-            } else {
-                glSurfaceView.scaleX = 1.0f
-                glSurfaceView.scaleY = 1.0f
-            }
-        }
+        addView(glSurfaceView, params)
+        addView(gridOverlay, params)
     }
 }

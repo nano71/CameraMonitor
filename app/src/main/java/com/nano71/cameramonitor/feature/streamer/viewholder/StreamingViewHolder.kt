@@ -15,18 +15,22 @@
  */
 package com.nano71.cameramonitor.feature.streamer.viewholder
 
-import android.os.SystemClock
 import android.util.Log
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.isVisible
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.RecyclerView
 import com.nano71.cameramonitor.R
-import com.nano71.cameramonitor.core.usb.UsbVideoNativeLibrary
 import com.nano71.cameramonitor.feature.streamer.StreamerScreen
 import com.nano71.cameramonitor.feature.streamer.StreamerViewModel
 import com.nano71.cameramonitor.feature.streamer.ui.VideoContainerView
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private const val TAG = "StreamingViewHolder"
 
@@ -53,11 +57,22 @@ class StreamingViewHolder(
 
         videoContainerView.initialize(width, height)
 
-        updateStreamStatsText()
         setupToolbarToggle()
         setupToolbarButtons()
     }
 
+    // 添加此方法用于观察和定时刷新
+    fun observeViewModel(lifecycleOwner: LifecycleOwner) {
+        lifecycleOwner.lifecycleScope.launch {
+            // 仅在生命周期处于 STARTED 时运行，离开页面会自动暂停，销毁时自动取消
+            lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                while (true) {
+                    streamStatsTextView.text = streamerViewModel.getVideoStreamInfoString()
+                    delay(1000L) // 每秒刷新一次
+                }
+            }
+        }
+    }
     private fun setupToolbarButtons() {
         backButton.setOnClickListener {
             Log.i(TAG, "offButton clicked")
@@ -70,10 +85,6 @@ class StreamingViewHolder(
             showZebra = !showZebra
             videoContainerView.setZebraVisible(showZebra)
         }
-    }
-
-    private fun updateStreamStatsText() {
-        streamStatsTextView.text = streamerViewModel.getVideoStreamInfoString()
     }
 
     private fun setupToolbarToggle() {

@@ -42,15 +42,8 @@ enum class UsbSpeed {
 }
 
 object UsbVideoNativeLibrary {
-
-    init {
-        System.loadLibrary("usbvideo")
-    }
-
-    fun getUsbSpeed(): UsbSpeed = UsbSpeed.entries[getUsbDeviceSpeed()]
-
-    private fun getUsbDeviceSpeed(): Int {
-        return 1
+    fun getUsbSpeed(): UsbSpeed {
+        return UsbSpeed.entries[getUsbDeviceSpeed()]
     }
 
     fun connectUsbAudioStreaming(
@@ -104,6 +97,8 @@ object UsbVideoNativeLibrary {
         jAudioPerfMode: Int,
         outputFramesPerBuffer: Int,
     ): Boolean
+
+    external fun getUsbDeviceSpeed(): Int
 
     external fun disconnectUsbAudioStreamingNative()
 

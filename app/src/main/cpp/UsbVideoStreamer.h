@@ -42,18 +42,6 @@ struct UsbVideoStreamerStats {
     nanoseconds capture_{0ns};
     nanoseconds render_{0ns};
 
-    void recordCapture() {
-        auto now = high_resolution_clock::now();
-        capture_ += (now - captureRenderClock_);
-        captureRenderClock_ = now;
-    }
-
-    void recordRender() {
-        auto now = high_resolution_clock::now();
-        render_ += (now - captureRenderClock_);
-        captureRenderClock_ = now;
-    }
-
     void recordFrame() {
         currentFps++;
         auto now = high_resolution_clock::now();
@@ -68,8 +56,6 @@ struct UsbVideoStreamerStats {
 class UsbVideoStreamer final {
 public:
     static void captureFrameCallback(uvc_frame_t *frame, void *user_data);
-
-    void setZebraVisible(jboolean visible);
 
     UsbVideoStreamer(
             intptr_t deviceFD,
