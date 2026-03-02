@@ -16,16 +16,16 @@
 
 #pragma once
 
-#include <android/native_window.h>
-#include <android/native_window_jni.h>
 #include <libusb.h>
 #include <libuvc/libuvc.h>
 #include <jni.h>
-
+#include <GLES2/gl2.h>
 #include <chrono>
 #include <cstdint>
 #include <memory>
 #include <vector>
+#include <string>
+#include <mutex>
 
 using namespace std::chrono;
 
@@ -34,25 +34,13 @@ struct UsbVideoStreamerStats {
     uint16_t usb_cb_counter = 0;
     uint16_t frames = 0;
     steady_clock::time_point lastFpsUpdate{0s};
-    uint8_t fps = 0; // memoize value of current FPS when second rolls over
+    uint8_t fps = 0;
     uint8_t currentFps = 0;
     steady_clock::time_point t0{high_resolution_clock::now()};
 
     steady_clock::time_point captureRenderClock_{high_resolution_clock::now()};
     nanoseconds capture_{0ns};
     nanoseconds render_{0ns};
-
-    void recordCapture() {
-        auto now = high_resolution_clock::now();
-        capture_ += (now - captureRenderClock_);
-        captureRenderClock_ = now;
-    }
-
-    void recordRender() {
-        auto now = high_resolution_clock::now();
-        render_ += (now - captureRenderClock_);
-        captureRenderClock_ = now;
-    }
 
     void recordFrame() {
         currentFps++;
@@ -65,18 +53,9 @@ struct UsbVideoStreamerStats {
     }
 };
 
-struct CaptureFrameCallbackData {
-    ANativeWindow *preview_window;
-    UsbVideoStreamerStats stats;
-};
-
 class UsbVideoStreamer final {
 public:
     static void captureFrameCallback(uvc_frame_t *frame, void *user_data);
-
-    void setZebraVisible(jboolean visible);
-
-    static void applyDynamicZebra(uint8_t *pixels, int width, int height, int stride, uint64_t frameCount);
 
     UsbVideoStreamer(
             intptr_t deviceFD,
@@ -87,15 +66,18 @@ public:
 
     ~UsbVideoStreamer();
 
-    bool configureOutput(ANativeWindow *previewWindow);
+    bool configureOutput();
 
     bool start();
 
     bool stop();
 
-    bool isRunning() const;
 
     std::string statsSummaryString() const;
+
+    // For Kotlin Renderer
+    int getFormat() const;
+    bool bindFrameToTextures(int texY, int texUV);
 
 private:
     uvc_context_t *uvcContext_{};
@@ -103,8 +85,6 @@ private:
     uvc_stream_ctrl_t streamCtrl_{};
     bool isStreamControlNegotiated_{false};
     uvc_stream_handle_t *streamHandle_{nullptr};
-
-    ANativeWindow *previewWindow_{};
 
     intptr_t deviceFD_;
     int32_t width_;
@@ -118,5 +98,10 @@ private:
     uvc_frame_format captureFrameFormat_{};
 
     UsbVideoStreamerStats stats_{};
-    bool showZebra_{false};
+
+    std::mutex frameMutex_;
+    bool frameUpdated_{false};
+    std::vector<uint8_t> plane0_;
+    std::vector<uint8_t> plane1_;
+    std::vector<uint8_t> rgbaBuffer_;
 };

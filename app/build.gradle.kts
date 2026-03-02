@@ -37,6 +37,7 @@ android {
         externalNativeBuild {
             cmake {
                 cppFlags += "-stdlib=libc++ -std=c++20 -fexperimental-library -fvisibility=hidden"
+                abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
             }
         }
     }

@@ -50,7 +50,7 @@ private const val UVC_VS_FRAME_UNCOMPRESSED: Int = 0x05
 private const val UVC_VS_FORMAT_MJPEG: Int = 0x06
 private const val UVC_VS_FRAME_MJPEG: Int = 0x07
 
-private val SUPPORTED_VIDEO_FOURCC_FORMATS: Array<String> = arrayOf("YUY2", "NV12", "MJPG")
+private val SUPPORTED_VIDEO_FOURCC_FORMATS: Array<String> = arrayOf("YUY2", "NV12", "MJPEG")
 
 private fun aspectRatio(width: Int, height: Int): Pair<Int, Int> {
     val divisor = gcd(width, height)
@@ -77,7 +77,7 @@ class VideoStreamingConnection(
                 parseRawDescriptors(usbDeviceConnection.rawDescriptors)
             } catch (e: Exception) {
                 Log.e(TAG, "Error in parsing USB descriptors for video streaming", e)
-                emptyList<VideoFormat>()
+                emptyList()
             }
         Log.i(TAG, "---- Supported video formats and frame sizes ----")
         videoFormats.forEach { Log.i(TAG, it.toString()) }
@@ -294,7 +294,7 @@ data class VideoFormat(
     fun toLibuvcFrameFormat(): LibuvcFrameFormat {
         return when (fourccFormat) {
             "YUY2" -> LibuvcFrameFormat.UVC_FRAME_FORMAT_YUYV
-            "MJPG" -> LibuvcFrameFormat.UVC_FRAME_FORMAT_MJPEG
+            "MJPEG" -> LibuvcFrameFormat.UVC_FRAME_FORMAT_MJPEG
             "NV12" -> LibuvcFrameFormat.UVC_FRAME_FORMAT_NV12
             else -> throw IllegalArgumentException("Unsupported fourcc format $fourccFormat")
         }
@@ -385,7 +385,7 @@ class VSMjpegFormatDescriptor(pack: ByteBuffer) {
     val bmInterlaceFlags: Int = pack.getBInt()
     val bCopyProtect: Int = pack.getBInt()
 
-    val fourccFormat: String = "MJPG"
+    val fourccFormat: String = "MJPEG"
 }
 
 /**

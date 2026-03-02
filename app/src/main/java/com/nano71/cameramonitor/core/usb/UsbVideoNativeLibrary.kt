@@ -18,13 +18,19 @@ package com.nano71.cameramonitor.core.usb
 import android.content.Context
 import android.media.AudioManager
 import android.media.AudioTrack
-import android.view.Surface
+import android.opengl.GLES20
+import android.opengl.GLSurfaceView
+import android.opengl.Matrix
+import android.os.SystemClock
 import com.nano71.cameramonitor.core.connection.AudioStreamingConnection
 import com.nano71.cameramonitor.core.connection.AudioStreamingFormatTypeDescriptor
 import com.nano71.cameramonitor.core.connection.VideoFormat
 import com.nano71.cameramonitor.core.connection.VideoStreamingConnection
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.FloatBuffer
+import javax.microedition.khronos.egl.EGLConfig
+import javax.microedition.khronos.opengles.GL10
 
 enum class UsbSpeed {
     Unknown,
@@ -36,10 +42,9 @@ enum class UsbSpeed {
 }
 
 object UsbVideoNativeLibrary {
-
-    fun getUsbSpeed(): UsbSpeed = UsbSpeed.entries[getUsbDeviceSpeed()]
-
-    private external fun getUsbDeviceSpeed(): Int
+    fun getUsbSpeed(): UsbSpeed {
+        return UsbSpeed.entries[getUsbDeviceSpeed()]
+    }
 
     fun connectUsbAudioStreaming(
         context: Context,
@@ -93,6 +98,8 @@ object UsbVideoNativeLibrary {
         outputFramesPerBuffer: Int,
     ): Boolean
 
+    external fun getUsbDeviceSpeed(): Int
+
     external fun disconnectUsbAudioStreamingNative()
 
     external fun startUsbAudioStreamingNative()
@@ -101,7 +108,6 @@ object UsbVideoNativeLibrary {
 
     fun connectUsbVideoStreaming(
         videoStreamingConnection: VideoStreamingConnection,
-        surface: Surface,
         frameFormat: VideoFormat?,
     ): Pair<Boolean, String> {
         val videoFormat = frameFormat ?: return false to "No supported video format"
@@ -112,7 +118,6 @@ object UsbVideoNativeLibrary {
                 videoFormat.height,
                 videoFormat.fps,
                 videoFormat.toLibuvcFrameFormat().ordinal,
-                surface,
             )
         ) {
             true to "Success"
@@ -127,75 +132,251 @@ object UsbVideoNativeLibrary {
         height: Int,
         fps: Int,
         libuvcFrameFormat: Int,
-        surface: Surface,
     ): Boolean
 
     external fun startUsbVideoStreamingNative(): Boolean
     external fun stopUsbVideoStreamingNative()
     external fun disconnectUsbVideoStreamingNative()
     external fun streamingStatsSummaryString(): String
-    external fun setZebraVisible(visible: Boolean)
+    external fun getVideoFormat(): Int
 
-    /**
-     * Kotlin implementation of dynamic zebra effect to reduce CPU load on C++ thread if needed,
-     * or to allow for easier experimentation.
-     */
     @JvmStatic
-    fun applyDynamicZebra(
-        pixels: ByteBuffer,
-        width: Int,
-        height: Int,
-        stride: Int,
-        frameCount: Long
-    ) {
-        val stripeWidth = 8
-        val stripePeriod = 16
-        val mask = stripePeriod - 1
-        val threshold100 = 215
-        val threshold70 = 180
-        val offset = (frameCount and mask.toLong()).toInt()
+    external fun updateTextures(texY: Int, texUV: Int): Boolean
 
-        pixels.order(ByteOrder.nativeOrder())
-        val intBuffer = pixels.asIntBuffer()
-        
-        // Use a temporary array for faster row-based access if needed, 
-        // but DirectByteBuffer.asIntBuffer() is generally quite fast.
-        val row = IntArray(width)
+    class VideoRenderer : GLSurfaceView.Renderer {
+        private var programNV12 = 0
+        private var programRGBA = 0
 
-        for (y in 0 until height) {
-            val rowStart = y * stride
-            intBuffer.position(rowStart)
-            intBuffer.get(row)
-            
-            var rowModified = false
-            for (x in 0 until width) {
-                val pixel = row[x]
-                // RGBA (Android order is usually R, G, B, A in bytes, so R is lowest byte)
-                val r = pixel and 0xFF
-                val g = (pixel shr 8) and 0xFF
-                val b = (pixel shr 16) and 0xFF
+        private var texY = 0
+        private var texUV = 0
 
-                // Luma calculation (BT.601)
-                val luma = (77 * r + 150 * g + 29 * b) shr 8
+        var showZebra = false
+        private val startTime = SystemClock.uptimeMillis()
 
-                if (luma >= threshold70) {
-                    val stripe = (x - y + offset) and mask
-                    if (stripe < stripeWidth) {
-                        if (luma >= threshold100) {
-                            // 100%+ -> Red (RGBA: 0xFF0000FF)
-                            row[x] = 0xFF0000FF.toInt()
-                        } else {
-                            // 70%-100% -> Green (RGBA: 0xFF00FF00)
-                            row[x] = 0xFF00FF00.toInt()
-                        }
-                        rowModified = true
-                    }
+        private lateinit var vertexBuffer: FloatBuffer
+        private lateinit var texCoordBuffer: FloatBuffer
+
+        private val mvpMatrix = FloatArray(16).apply { Matrix.setIdentityM(this, 0) }
+
+        private val vertices = floatArrayOf(
+            -1.0f, -1.0f,
+            1.0f, -1.0f,
+            -1.0f, 1.0f,
+            1.0f, 1.0f
+        )
+
+        private val texCoords = floatArrayOf(
+            0.0f, 1.0f,
+            1.0f, 1.0f,
+            0.0f, 0.0f,
+            1.0f, 0.0f
+        )
+
+        override fun onSurfaceCreated(p0: GL10, p1: EGLConfig) {
+            GLES20.glClearColor(0f, 0f, 0f, 1f)
+            texY = createTexture()
+            texUV = createTexture()
+
+            vertexBuffer = ByteBuffer.allocateDirect(vertices.size * 4)
+                .order(ByteOrder.nativeOrder())
+                .asFloatBuffer()
+                .put(vertices)
+            vertexBuffer.position(0)
+
+            texCoordBuffer = ByteBuffer.allocateDirect(texCoords.size * 4)
+                .order(ByteOrder.nativeOrder())
+                .asFloatBuffer()
+                .put(texCoords)
+            texCoordBuffer.position(0)
+
+            initShaders()
+        }
+
+        private fun initShaders() {
+            val vertexShaderCode = """
+                attribute vec4 aPosition;
+                attribute vec2 aTexCoord;
+                varying vec2 vTexCoord;
+                uniform mat4 uMVPMatrix;
+                void main() {
+                    gl_Position = uMVPMatrix * aPosition;
+                    vTexCoord = aTexCoord;
                 }
+            """.trimIndent()
+
+            val fragmentShaderNV12Code = """
+                precision mediump float;
+                varying vec2 vTexCoord;
+                uniform sampler2D uTextureY;
+                uniform sampler2D uTextureUV;
+                uniform float uTime;
+                uniform int uShowZebra;
+                void main() {
+                    float y = texture2D(uTextureY, vTexCoord).r;
+                    vec4 uv = texture2D(uTextureUV, vTexCoord);
+                    float u = uv.r - 0.5;
+                    float v = uv.a - 0.5;
+                    float r = y + 1.402 * v;
+                    float g = y - 0.34414 * u - 0.71414 * v;
+                    float b = y + 1.772 * u;
+                    vec4 color = vec4(r, g, b, 1.0);
+                    
+                    if (uShowZebra == 1) {
+                        float luma = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+                        float stripe = mod((gl_FragCoord.x - gl_FragCoord.y + uTime * 0.05), 16.0);
+                        if (stripe < 6.0) {
+                            if (luma >= 0.85) {
+                                color = vec4(1.0, 0.0, 0.0, 1.0);
+                            } else if (luma >= 0.7) {
+                                color = vec4(0.0, 1.0, 0.0, 1.0);
+                            }
+                        }
+                    }
+                    gl_FragColor = color;
+                }
+            """.trimIndent()
+
+            val fragmentShaderRGBACode = """
+                precision mediump float;
+                varying vec2 vTexCoord;
+                uniform sampler2D uTextureRGBA;
+                uniform float uTime;
+                uniform int uShowZebra;
+                void main() {
+                    vec4 color = texture2D(uTextureRGBA, vTexCoord);
+                    if (uShowZebra == 1) {
+                        float luma = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+                        float stripe = mod((gl_FragCoord.x - gl_FragCoord.y + uTime * 0.05), 16.0);
+                        if (stripe < 6.0) {
+                            if (luma >= 0.85) {
+                                color = vec4(1.0, 0.0, 0.0, 1.0);
+                            } else if (luma >= 0.7) {
+                                color = vec4(0.0, 1.0, 0.0, 1.0);
+                            }
+                        }
+                    }
+                    gl_FragColor = color;
+                }
+            """.trimIndent()
+
+            programNV12 = createProgram(vertexShaderCode, fragmentShaderNV12Code)
+            programRGBA = createProgram(vertexShaderCode, fragmentShaderRGBACode)
+        }
+
+        private fun createProgram(vSource: String, fSource: String): Int {
+            val vShader = loadShader(GLES20.GL_VERTEX_SHADER, vSource)
+            val fShader = loadShader(GLES20.GL_FRAGMENT_SHADER, fSource)
+            val program = GLES20.glCreateProgram()
+            GLES20.glAttachShader(program, vShader)
+            GLES20.glAttachShader(program, fShader)
+            GLES20.glLinkProgram(program)
+            return program
+        }
+
+        private fun loadShader(type: Int, shaderCode: String): Int {
+            return GLES20.glCreateShader(type).also { shader ->
+                GLES20.glShaderSource(shader, shaderCode)
+                GLES20.glCompileShader(shader)
             }
-            if (rowModified) {
-                intBuffer.position(rowStart)
-                intBuffer.put(row)
+        }
+
+        override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
+            GLES20.glViewport(0, 0, width, height)
+        }
+
+        override fun onDrawFrame(gl: GL10?) {
+            // Attempt to update textures. If false, we still draw the last frame data
+            // to avoid flickering (skipping draw or clearing to black).
+            updateTextures(texY, texUV)
+
+            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+
+            val time = (SystemClock.uptimeMillis() - startTime).toFloat()
+
+            val format = getVideoFormat()
+            if (format == 1) { // NV12
+                drawNV12(time)
+            } else { // RGBA or others treated as RGBA
+                drawRGBA(time)
             }
+        }
+
+        private fun drawNV12(time: Float) {
+            GLES20.glUseProgram(programNV12)
+
+            val positionHandle = GLES20.glGetAttribLocation(programNV12, "aPosition")
+            GLES20.glEnableVertexAttribArray(positionHandle)
+            GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 8, vertexBuffer)
+
+            val texCoordHandle = GLES20.glGetAttribLocation(programNV12, "aTexCoord")
+            GLES20.glEnableVertexAttribArray(texCoordHandle)
+            GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 8, texCoordBuffer)
+
+            val mvpHandle = GLES20.glGetUniformLocation(programNV12, "uMVPMatrix")
+            GLES20.glUniformMatrix4fv(mvpHandle, 1, false, mvpMatrix, 0)
+
+            val timeHandle = GLES20.glGetUniformLocation(programNV12, "uTime")
+            GLES20.glUniform1f(timeHandle, time)
+
+            val zebraHandle = GLES20.glGetUniformLocation(programNV12, "uShowZebra")
+            GLES20.glUniform1i(zebraHandle, if (showZebra) 1 else 0)
+
+            val texYHandle = GLES20.glGetUniformLocation(programNV12, "uTextureY")
+            GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texY)
+            GLES20.glUniform1i(texYHandle, 0)
+
+            val texUVHandle = GLES20.glGetUniformLocation(programNV12, "uTextureUV")
+            GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texUV)
+            GLES20.glUniform1i(texUVHandle, 1)
+
+            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+
+            GLES20.glDisableVertexAttribArray(positionHandle)
+            GLES20.glDisableVertexAttribArray(texCoordHandle)
+        }
+
+        private fun drawRGBA(time: Float) {
+            GLES20.glUseProgram(programRGBA)
+
+            val positionHandle = GLES20.glGetAttribLocation(programRGBA, "aPosition")
+            GLES20.glEnableVertexAttribArray(positionHandle)
+            GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 8, vertexBuffer)
+
+            val texCoordHandle = GLES20.glGetAttribLocation(programRGBA, "aTexCoord")
+            GLES20.glEnableVertexAttribArray(texCoordHandle)
+            GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 8, texCoordBuffer)
+
+            val mvpHandle = GLES20.glGetUniformLocation(programRGBA, "uMVPMatrix")
+            GLES20.glUniformMatrix4fv(mvpHandle, 1, false, mvpMatrix, 0)
+
+            val timeHandle = GLES20.glGetUniformLocation(programRGBA, "uTime")
+            GLES20.glUniform1f(timeHandle, time)
+
+            val zebraHandle = GLES20.glGetUniformLocation(programRGBA, "uShowZebra")
+            GLES20.glUniform1i(zebraHandle, if (showZebra) 1 else 0)
+
+            val texRGBAHandle = GLES20.glGetUniformLocation(programRGBA, "uTextureRGBA")
+            GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texY)
+            GLES20.glUniform1i(texRGBAHandle, 0)
+
+            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+
+            GLES20.glDisableVertexAttribArray(positionHandle)
+            GLES20.glDisableVertexAttribArray(texCoordHandle)
+        }
+
+        private fun createTexture(): Int {
+            val tex = IntArray(1)
+            GLES20.glGenTextures(1, tex, 0)
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, tex[0])
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
+            return tex[0]
         }
     }
 }

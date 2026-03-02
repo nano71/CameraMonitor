@@ -15,19 +15,22 @@
  */
 package com.nano71.cameramonitor.feature.streamer.viewholder
 
-import android.graphics.SurfaceTexture
-import android.os.SystemClock
 import android.util.Log
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.isVisible
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.RecyclerView
 import com.nano71.cameramonitor.R
-import com.nano71.cameramonitor.core.usb.UsbVideoNativeLibrary
 import com.nano71.cameramonitor.feature.streamer.StreamerScreen
 import com.nano71.cameramonitor.feature.streamer.StreamerViewModel
 import com.nano71.cameramonitor.feature.streamer.ui.VideoContainerView
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private const val TAG = "StreamingViewHolder"
 
@@ -43,14 +46,9 @@ class StreamingViewHolder(
     val backButton: View = bottomToolbar.findViewById(R.id.back_button)
     val gridButton: View = bottomToolbar.findViewById(R.id.grid_button)
     val zebraPrintButton: View = bottomToolbar.findViewById(R.id.texture_button)
-    val histogramButton: View = bottomToolbar.findViewById(R.id.histogram_button)
-    val recordButton: View = bottomToolbar.findViewById(R.id.record_button)
-    val screenShotButton: View = bottomToolbar.findViewById(R.id.screenshot_button)
 
     var operating = false
     var showZebra = false
-
-    private var lastUpdatedAt = 0L
 
     init {
         val videoFormat = streamerViewModel.videoFormat
@@ -59,31 +57,22 @@ class StreamingViewHolder(
 
         videoContainerView.initialize(width, height)
 
-        videoContainerView.setSurfaceCallback(
-            object : VideoContainerView.SurfaceCallback {
-
-                override fun onAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-                    streamerViewModel.surfaceTextureAvailable(surface, width, height)
-                }
-
-                override fun onDestroyed() {
-                    streamerViewModel.surfaceTextureDestroyed()
-                }
-
-                override fun onFrameUpdated() {
-                    val now = SystemClock.uptimeMillis()
-                    if (now - lastUpdatedAt > 999) {
-                        updateStreamStatsText()
-                        lastUpdatedAt = now
-                    }
-                }
-            }
-        )
-        updateStreamStatsText()
         setupToolbarToggle()
         setupToolbarButtons()
     }
 
+    // 添加此方法用于观察和定时刷新
+    fun observeViewModel(lifecycleOwner: LifecycleOwner) {
+        lifecycleOwner.lifecycleScope.launch {
+            // 仅在生命周期处于 STARTED 时运行，离开页面会自动暂停，销毁时自动取消
+            lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                while (true) {
+                    streamStatsTextView.text = streamerViewModel.getVideoStreamInfoString()
+                    delay(1000L) // 每秒刷新一次
+                }
+            }
+        }
+    }
     private fun setupToolbarButtons() {
         backButton.setOnClickListener {
             Log.i(TAG, "offButton clicked")
@@ -93,13 +82,9 @@ class StreamingViewHolder(
             videoContainerView.toggleGridVisible()
         }
         zebraPrintButton.setOnClickListener {
-            showZebra=!showZebra
-            UsbVideoNativeLibrary.setZebraVisible(showZebra)
+            showZebra = !showZebra
+            videoContainerView.setZebraVisible(showZebra)
         }
-    }
-
-    private fun updateStreamStatsText() {
-        streamStatsTextView.text = streamerViewModel.getVideoStreamInfoString()
     }
 
     private fun setupToolbarToggle() {

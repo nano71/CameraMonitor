@@ -15,7 +15,6 @@
  */
 package com.nano71.cameramonitor.feature.streamer.adapter
 
-import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -53,19 +52,13 @@ class StreamerScreensAdapter(
         }
     }
 
-    @SuppressLint("NotifyDataSetChanged")
-    private fun navigateTo(screen: StreamerScreen) {
-        screens = listOf(screen)
-        notifyDataSetChanged()
-    }
-
     fun ViewGroup.inflate(@LayoutRes layoutRes: Int): View =
         LayoutInflater.from(context).inflate(layoutRes, this, false)
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (holder) {
             is StatusScreenViewHolder -> holder.observeViewModel(lifecycleOwner, streamerViewModel)
-            is StreamingViewHolder -> Unit
+            is StreamingViewHolder -> holder.observeViewModel(lifecycleOwner)
         }
     }
 
