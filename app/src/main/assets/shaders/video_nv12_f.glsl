@@ -1,14 +1,16 @@
+#version 300 es
 precision mediump float;
-varying vec2 vTexCoord;
+in vec2 vTexCoord;
+out vec4 fragColor;
 uniform sampler2D uTextureY;
 uniform sampler2D uTextureUV;
 uniform float uTime;
 uniform int uShowZebra;
 void main() {
-    float y = texture2D(uTextureY, vTexCoord).r;
-    vec4 uv = texture2D(uTextureUV, vTexCoord);
+    float y = texture(uTextureY, vTexCoord).r;
+    vec2 uv = texture(uTextureUV, vTexCoord).rg;
     float u = uv.r - 0.5;
-    float v = uv.a - 0.5;
+    float v = uv.g - 0.5;
     float r = y + 1.402 * v;
     float g = y - 0.34414 * u - 0.71414 * v;
     float b = y + 1.772 * u;
@@ -20,10 +22,10 @@ void main() {
         if (stripe < 6.0) {
             if (luma >= 0.85) {
                 color = vec4(1.0, 0.0, 0.0, 1.0);
-            } else if (luma >= 0.7) {
+            } else if (luma >= 0.8) {
                 color = vec4(0.0, 1.0, 0.0, 1.0);
             }
         }
     }
-    gl_FragColor = color;
+    fragColor = color;
 }

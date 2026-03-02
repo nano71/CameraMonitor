@@ -19,12 +19,6 @@
 #include <android/bitmap.h>
 #include <android/data_space.h>
 
-#if __ANDROID_MIN_SDK_VERSION__ >= 30
-
-#include <android/imagedecoder.h>
-
-#endif
-
 #include <android/log.h>
 #include <jni.h>
 #include <libusb.h>
@@ -87,14 +81,13 @@ UsbVideoStreamer::UsbVideoStreamer(
         captureFrameFormat_ = uvcFrameFormat_;
         isStreamControlNegotiated_ = true;
 
-        // 预分配 buffer，避免每帧分配
         if (uvcFrameFormat_ == UVC_FRAME_FORMAT_NV12) {
             plane0_.resize(width * height);
             plane1_.resize(width * height / 2);
         } else if (uvcFrameFormat_ == UVC_FRAME_FORMAT_YUYV) {
             plane0_.resize(width * height * 2);
         } else if (uvcFrameFormat_ == UVC_FRAME_FORMAT_MJPEG) {
-            plane0_.resize(width * height * 4); // RGBA
+            plane0_.resize(width * height * 4);
         }
     } else {
         isStreamControlNegotiated_ = false;
@@ -139,7 +132,6 @@ int UsbVideoStreamer::getFormat() const {
     }
 }
 
-// GPU 绑定纹理
 bool UsbVideoStreamer::bindFrameToTextures(int texY, int texUV) {
     std::lock_guard<std::mutex> lock(frameMutex_);
     if (!frameUpdated_) return false;
@@ -148,15 +140,17 @@ bool UsbVideoStreamer::bindFrameToTextures(int texY, int texUV) {
     glBindTexture(GL_TEXTURE_2D, texY);
 
     if (getFormat() == 1) { // NV12
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, width_, height_, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, plane0_.data());
+        // In GLES 3.0, use GL_R8 and GL_RED for the Y plane
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width_, height_, 0, GL_RED, GL_UNSIGNED_BYTE, plane0_.data());
+
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texUV);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE_ALPHA, width_ / 2, height_ / 2, 0, GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE, plane1_.data());
+        // In GLES 3.0, use GL_RG8 and GL_RG for the UV plane
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RG8, width_ / 2, height_ / 2, 0, GL_RG, GL_UNSIGNED_BYTE, plane1_.data());
     } else if (getFormat() == 2) { // YUYV
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width_ / 2, height_, 0, GL_RGBA, GL_UNSIGNED_BYTE, plane0_.data());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width_ / 2, height_, 0, GL_RGBA, GL_UNSIGNED_BYTE, plane0_.data());
     } else { // RGBA (MJPEG)
-        // 使用标准的 GL_RGBA 格式以确保在所有设备上正常显示
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width_, height_, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgbaBuffer_.data());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width_, height_, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgbaBuffer_.data());
     }
 
     frameUpdated_ = false;
@@ -174,13 +168,11 @@ void UsbVideoStreamer::captureFrameCallback(uvc_frame_t *frame, void *user_data)
     self->width_ = width;
     self->height_ = height;
 
-    // 预分配 RGBA buffer
     if (self->rgbaBuffer_.size() != width * height * 4) {
         self->rgbaBuffer_.resize(width * height * 4);
     }
     uint8_t *rgbaData = self->rgbaBuffer_.data();
 
-    // 1️⃣ 根据格式最小化 CPU 处理
     switch (frame->frame_format) {
         case UVC_FRAME_FORMAT_NV12: {
             size_t y_size = width * height;
@@ -198,16 +190,13 @@ void UsbVideoStreamer::captureFrameCallback(uvc_frame_t *frame, void *user_data)
             break;
         }
         case UVC_FRAME_FORMAT_MJPEG: {
-            // 保持使用 uvc_mjpeg2rgb 和 libyuv::RAWToARGB
             uvc_frame_t *rgb_frame = uvc_allocate_frame(width * height * 3);
             if (rgb_frame) {
                 if (uvc_mjpeg2rgb(frame, rgb_frame) == UVC_SUCCESS) {
-                    // RAWToARGB 将 RGB24 转为内存中的 BGRA
                     libyuv::RAWToARGB(
                             (uint8_t *) rgb_frame->data, rgb_frame->step,
                             rgbaData, width * 4,
                             width, height);
-                    // 通过 ARGBToABGR 交换内存中的 R 和 B 位置，得到 RGBA，从而匹配 GL_RGBA
                     libyuv::ARGBToABGR(rgbaData, width * 4, rgbaData, width * 4, width, height);
                 }
                 uvc_free_frame(rgb_frame);

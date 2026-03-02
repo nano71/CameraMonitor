@@ -61,14 +61,12 @@ class StreamingViewHolder(
         setupToolbarButtons()
     }
 
-    // 添加此方法用于观察和定时刷新
     fun observeViewModel(lifecycleOwner: LifecycleOwner) {
         lifecycleOwner.lifecycleScope.launch {
-            // 仅在生命周期处于 STARTED 时运行，离开页面会自动暂停，销毁时自动取消
             lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 while (true) {
                     streamStatsTextView.text = streamerViewModel.getVideoStreamInfoString()
-                    delay(1000L) // 每秒刷新一次
+                    delay(1000L)
                 }
             }
         }

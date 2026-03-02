@@ -32,7 +32,7 @@ class CameraGridOverlay @JvmOverloads constructor(
         strokeWidth = 2f
         style = Paint.Style.STROKE
         isAntiAlias = true
-        alpha = 120  // 半透明
+        alpha = 120
         visibility = GONE
     }
 
@@ -45,11 +45,9 @@ class CameraGridOverlay @JvmOverloads constructor(
         val oneThirdWidth = width / 3
         val oneThirdHeight = height / 3
 
-        // 画两条竖线
         canvas.drawLine(oneThirdWidth, 0f, oneThirdWidth, height, paint)
         canvas.drawLine(oneThirdWidth * 2, 0f, oneThirdWidth * 2, height, paint)
 
-        // 画两条横线
         canvas.drawLine(0f, oneThirdHeight, width, oneThirdHeight, paint)
         canvas.drawLine(0f, oneThirdHeight * 2, width, oneThirdHeight * 2, paint)
     }

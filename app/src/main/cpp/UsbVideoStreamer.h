@@ -19,7 +19,7 @@
 #include <libusb.h>
 #include <libuvc/libuvc.h>
 #include <jni.h>
-#include <GLES2/gl2.h>
+#include <GLES3/gl3.h>
 #include <chrono>
 #include <cstdint>
 #include <memory>
@@ -72,10 +72,8 @@ public:
 
     bool stop();
 
-
     std::string statsSummaryString() const;
 
-    // For Kotlin Renderer
     int getFormat() const;
     bool bindFrameToTextures(int texY, int texUV);
 

@@ -18,7 +18,7 @@ package com.nano71.cameramonitor.core.usb
 import android.content.Context
 import android.media.AudioManager
 import android.media.AudioTrack
-import android.opengl.GLES20
+import android.opengl.GLES30
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import android.os.SystemClock
@@ -172,8 +172,8 @@ object UsbVideoNativeLibrary {
             1.0f, 0.0f
         )
 
-        override fun onSurfaceCreated(p0: GL10, p1: EGLConfig) {
-            GLES20.glClearColor(0f, 0f, 0f, 1f)
+        override fun onSurfaceCreated(unused: GL10, p1: EGLConfig) {
+            GLES30.glClearColor(0f, 0f, 0f, 1f)
             texY = createTexture()
             texUV = createTexture()
 
@@ -206,32 +206,32 @@ object UsbVideoNativeLibrary {
         }
 
         private fun createProgram(vSource: String, fSource: String): Int {
-            val vShader = loadShader(GLES20.GL_VERTEX_SHADER, vSource)
-            val fShader = loadShader(GLES20.GL_FRAGMENT_SHADER, fSource)
-            val program = GLES20.glCreateProgram()
-            GLES20.glAttachShader(program, vShader)
-            GLES20.glAttachShader(program, fShader)
-            GLES20.glLinkProgram(program)
+            val vShader = loadShader(GLES30.GL_VERTEX_SHADER, vSource)
+            val fShader = loadShader(GLES30.GL_FRAGMENT_SHADER, fSource)
+            val program = GLES30.glCreateProgram()
+            GLES30.glAttachShader(program, vShader)
+            GLES30.glAttachShader(program, fShader)
+            GLES30.glLinkProgram(program)
             return program
         }
 
         private fun loadShader(type: Int, shaderCode: String): Int {
-            return GLES20.glCreateShader(type).also { shader ->
-                GLES20.glShaderSource(shader, shaderCode)
-                GLES20.glCompileShader(shader)
+            return GLES30.glCreateShader(type).also { shader ->
+                GLES30.glShaderSource(shader, shaderCode)
+                GLES30.glCompileShader(shader)
             }
         }
 
-        override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
-            GLES20.glViewport(0, 0, width, height)
+        override fun onSurfaceChanged(unused: GL10?, width: Int, height: Int) {
+            GLES30.glViewport(0, 0, width, height)
         }
 
-        override fun onDrawFrame(gl: GL10?) {
+        override fun onDrawFrame(unused: GL10?) {
             // Attempt to update textures. If false, we still draw the last frame data
             // to avoid flickering (skipping draw or clearing to black).
             updateTextures(texY, texUV)
 
-            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+            GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
 
             val time = (SystemClock.uptimeMillis() - startTime).toFloat()
 
@@ -244,80 +244,80 @@ object UsbVideoNativeLibrary {
         }
 
         private fun drawNV12(time: Float) {
-            GLES20.glUseProgram(programNV12)
+            GLES30.glUseProgram(programNV12)
 
-            val positionHandle = GLES20.glGetAttribLocation(programNV12, "aPosition")
-            GLES20.glEnableVertexAttribArray(positionHandle)
-            GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 8, vertexBuffer)
+            val positionHandle = GLES30.glGetAttribLocation(programNV12, "aPosition")
+            GLES30.glEnableVertexAttribArray(positionHandle)
+            GLES30.glVertexAttribPointer(positionHandle, 2, GLES30.GL_FLOAT, false, 8, vertexBuffer)
 
-            val texCoordHandle = GLES20.glGetAttribLocation(programNV12, "aTexCoord")
-            GLES20.glEnableVertexAttribArray(texCoordHandle)
-            GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 8, texCoordBuffer)
+            val texCoordHandle = GLES30.glGetAttribLocation(programNV12, "aTexCoord")
+            GLES30.glEnableVertexAttribArray(texCoordHandle)
+            GLES30.glVertexAttribPointer(texCoordHandle, 2, GLES30.GL_FLOAT, false, 8, texCoordBuffer)
 
-            val mvpHandle = GLES20.glGetUniformLocation(programNV12, "uMVPMatrix")
-            GLES20.glUniformMatrix4fv(mvpHandle, 1, false, mvpMatrix, 0)
+            val mvpHandle = GLES30.glGetUniformLocation(programNV12, "uMVPMatrix")
+            GLES30.glUniformMatrix4fv(mvpHandle, 1, false, mvpMatrix, 0)
 
-            val timeHandle = GLES20.glGetUniformLocation(programNV12, "uTime")
-            GLES20.glUniform1f(timeHandle, time)
+            val timeHandle = GLES30.glGetUniformLocation(programNV12, "uTime")
+            GLES30.glUniform1f(timeHandle, time)
 
-            val zebraHandle = GLES20.glGetUniformLocation(programNV12, "uShowZebra")
-            GLES20.glUniform1i(zebraHandle, if (showZebra) 1 else 0)
+            val zebraHandle = GLES30.glGetUniformLocation(programNV12, "uShowZebra")
+            GLES30.glUniform1i(zebraHandle, if (showZebra) 1 else 0)
 
-            val texYHandle = GLES20.glGetUniformLocation(programNV12, "uTextureY")
-            GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texY)
-            GLES20.glUniform1i(texYHandle, 0)
+            val texYHandle = GLES30.glGetUniformLocation(programNV12, "uTextureY")
+            GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
+            GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, texY)
+            GLES30.glUniform1i(texYHandle, 0)
 
-            val texUVHandle = GLES20.glGetUniformLocation(programNV12, "uTextureUV")
-            GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
-            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texUV)
-            GLES20.glUniform1i(texUVHandle, 1)
+            val texUVHandle = GLES30.glGetUniformLocation(programNV12, "uTextureUV")
+            GLES30.glActiveTexture(GLES30.GL_TEXTURE1)
+            GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, texUV)
+            GLES30.glUniform1i(texUVHandle, 1)
 
-            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+            GLES30.glDrawArrays(GLES30.GL_TRIANGLE_STRIP, 0, 4)
 
-            GLES20.glDisableVertexAttribArray(positionHandle)
-            GLES20.glDisableVertexAttribArray(texCoordHandle)
+            GLES30.glDisableVertexAttribArray(positionHandle)
+            GLES30.glDisableVertexAttribArray(texCoordHandle)
         }
 
         private fun drawRGBA(time: Float) {
-            GLES20.glUseProgram(programRGBA)
+            GLES30.glUseProgram(programRGBA)
 
-            val positionHandle = GLES20.glGetAttribLocation(programRGBA, "aPosition")
-            GLES20.glEnableVertexAttribArray(positionHandle)
-            GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 8, vertexBuffer)
+            val positionHandle = GLES30.glGetAttribLocation(programRGBA, "aPosition")
+            GLES30.glEnableVertexAttribArray(positionHandle)
+            GLES30.glVertexAttribPointer(positionHandle, 2, GLES30.GL_FLOAT, false, 8, vertexBuffer)
 
-            val texCoordHandle = GLES20.glGetAttribLocation(programRGBA, "aTexCoord")
-            GLES20.glEnableVertexAttribArray(texCoordHandle)
-            GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 8, texCoordBuffer)
+            val texCoordHandle = GLES30.glGetAttribLocation(programRGBA, "aTexCoord")
+            GLES30.glEnableVertexAttribArray(texCoordHandle)
+            GLES30.glVertexAttribPointer(texCoordHandle, 2, GLES30.GL_FLOAT, false, 8, texCoordBuffer)
 
-            val mvpHandle = GLES20.glGetUniformLocation(programRGBA, "uMVPMatrix")
-            GLES20.glUniformMatrix4fv(mvpHandle, 1, false, mvpMatrix, 0)
+            val mvpHandle = GLES30.glGetUniformLocation(programRGBA, "uMVPMatrix")
+            GLES30.glUniformMatrix4fv(mvpHandle, 1, false, mvpMatrix, 0)
 
-            val timeHandle = GLES20.glGetUniformLocation(programRGBA, "uTime")
-            GLES20.glUniform1f(timeHandle, time)
+            val timeHandle = GLES30.glGetUniformLocation(programRGBA, "uTime")
+            GLES30.glUniform1f(timeHandle, time)
 
-            val zebraHandle = GLES20.glGetUniformLocation(programRGBA, "uShowZebra")
-            GLES20.glUniform1i(zebraHandle, if (showZebra) 1 else 0)
+            val zebraHandle = GLES30.glGetUniformLocation(programRGBA, "uShowZebra")
+            GLES30.glUniform1i(zebraHandle, if (showZebra) 1 else 0)
 
-            val texRGBAHandle = GLES20.glGetUniformLocation(programRGBA, "uTextureRGBA")
-            GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texY)
-            GLES20.glUniform1i(texRGBAHandle, 0)
+            val texRGBAHandle = GLES30.glGetUniformLocation(programRGBA, "uTextureRGBA")
+            GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
+            GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, texY)
+            GLES30.glUniform1i(texRGBAHandle, 0)
 
-            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+            GLES30.glDrawArrays(GLES30.GL_TRIANGLE_STRIP, 0, 4)
 
-            GLES20.glDisableVertexAttribArray(positionHandle)
-            GLES20.glDisableVertexAttribArray(texCoordHandle)
+            GLES30.glDisableVertexAttribArray(positionHandle)
+            GLES30.glDisableVertexAttribArray(texCoordHandle)
         }
 
         private fun createTexture(): Int {
             val tex = IntArray(1)
-            GLES20.glGenTextures(1, tex, 0)
-            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, tex[0])
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
+            GLES30.glGenTextures(1, tex, 0)
+            GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, tex[0])
+            GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR)
+            GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
+            GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE)
+            GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
             return tex[0]
         }
     }

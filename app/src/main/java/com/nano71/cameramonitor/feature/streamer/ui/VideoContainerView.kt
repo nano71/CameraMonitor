@@ -43,7 +43,7 @@ class VideoContainerView @JvmOverloads constructor(
     fun initialize(videoWidth: Int, videoHeight: Int) {
         if (glSurfaceView != null) return
         glSurfaceView = GLSurfaceView(context).apply {
-            setEGLContextClientVersion(2)
+            setEGLContextClientVersion(3)
             setRenderer(renderer)
             renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
         }
